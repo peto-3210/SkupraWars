@@ -5,7 +5,7 @@ uint8_t period_us = 0;
 
 void hardware_timer_init(uint8_t period){
     current_microseconds = 0;
-    TCCR0A = 0b01000010; //Set timer to CTC mode + enable output on pin
+    TCCR0A = 0b00000010; //Set timer to CTC mode + enable output on pin //0b01000010
     TCCR0B = 0b00000010; //Set time source to internal clock divided by 8
     TCNT0 = 0; //Set timer register value to 0
     period_us = period;

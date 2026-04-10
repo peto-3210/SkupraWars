@@ -11,6 +11,9 @@ every tick of hardware clock.
 Library requires MCU running at 16MHz.
 */
 
+#ifndef SOFTWARE_TIMER
+#define SOFTWARE_TIMER
+
 class SoftwareTimer{
 
     friend class SoftwareTimerPool;
@@ -40,6 +43,11 @@ class SoftwareTimer{
      * @return True if timer finished, false otherwise.
      */
     bool isDone();
+
+    /**
+     * @brief Immediately stops timer.
+     */
+    void stop();
 };
 
 class SoftwareTimerPool{
@@ -49,12 +57,12 @@ class SoftwareTimerPool{
 
     private:
     static SoftwareTimer timerList[MAX_TIMER_NUM];
-    uint32_t lastTimestamp = 0;
-    uint8_t timerNum = 0;
+    static uint32_t lastTimestamp;
+    static uint8_t timerNum;
     static bool initialized;
 
-    // Private Constructor
-    SoftwareTimerPool() = default;
+    // No Constructor
+    SoftwareTimerPool() = delete;
 
     // delete copy/move
     SoftwareTimerPool(const SoftwareTimer&) = delete;
@@ -64,29 +72,27 @@ class SoftwareTimerPool{
     /**
      * @brief Initializes software timer
      * 
-     * @param periodUs Determines period of timer. A tick of hardware clock lasts 2 microseconds.
-     * 
-     * @return SoftwareTimer reference
+     * @param periodUS Period of hardware timer in microseconds. This value determines the resolution of software timers.
      */
-    static SoftwareTimerPool& initTimerPool(uint8_t periodUs);
+    static void initTimerPool(uint8_t periodUS);
 
     /**
      * @brief Obtains timer. Timer is automatically added to timer pool,
      * with value 0 (as if timer is finished).
      * 
-     * @return Reference to timer object, or the last available timer 
-     * if user exceed max amount of timers.
+     * @return Pointer to timer object, or nullptr
+     * if no timer is available.
      */
-    SoftwareTimer& acquireTimer();
+    static SoftwareTimer* acquireTimer();
 
 
     /**
      * @brief Main timing function, must be called periodically in a loop.
      */
-    void tick();
+    static void tick();
     
 };
 
-
+#endif
 
 

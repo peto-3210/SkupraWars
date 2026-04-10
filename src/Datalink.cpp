@@ -1,5 +1,16 @@
 #include "Datalink.hpp"
 
+bool Datalink::initialized = false;
+bool Datalink::replying = false;
+uint8_t  Datalink::nodeNum = false;
+
+uint8_t Datalink::datalinkPacket[DATALINK_PACKET_LENGTH] = {0};
+
+uint32_t Datalink::packetReceiveTimeUS = 0;
+SoftwareTimer* Datalink::packetReceiveTimer = nullptr;
+const char* Datalink::errorMsg = nullptr;
+uint8_t Datalink::errorData = 0;
+
 //Maxim-DOW CRC-8 precalculated values
 static const uint8_t CRC_8_TABLE[256] = 
 {
@@ -23,7 +34,6 @@ static const uint8_t CRC_8_TABLE[256] =
 
 /**
  * @brief Calculates CRC8 for message.
- * Only function code and payload is considered in calculation.
  * 
  * @param data Data buffer
  * @param direction If false, calculates CRC and appends it to the end 
@@ -32,11 +42,12 @@ static const uint8_t CRC_8_TABLE[256] =
  * @return True if received and calculated CRC match, false otherwise.
  *  If direction == false, return value is always true.
  */
-bool Datalink::calculateCRC(uint8_t data[3], bool direction){
+bool Datalink::calculateCRC(uint8_t data[DATALINK_PACKET_LENGTH], bool direction){
 	uint8_t CRC = 0;
 
-    CRC = CRC_8_TABLE[CRC ^ (data[0] & 0b00001111)];
-    CRC = CRC_8_TABLE[CRC ^ data[1]];
+	for (uint8_t i = 0; i < PACKET_LENGTH; i++){
+    	CRC = CRC_8_TABLE[CRC ^ data[i]];
+	}
 
     if (direction == false){
         data[2] = CRC;
@@ -45,8 +56,7 @@ bool Datalink::calculateCRC(uint8_t data[3], bool direction){
     return data[2] == CRC;
 }
 
-Datalink& Datalink::initDatalink(Datalink::baudRate rate){
-	static Datalink link1;
+void Datalink::initDatalink(Datalink::baudRate rate){
     if (initialized == false){
         switch (rate){
 			case b9600:
@@ -61,9 +71,10 @@ Datalink& Datalink::initDatalink(Datalink::baudRate rate){
 				uart_begin(BAUD_RATE_CONSTANT_115200);
 				break;
 		}
-        initialized = true;
+		packetReceiveTimer = SoftwareTimerPool::acquireTimer();
+		packetReceiveTimeUS = (1/rate) * 11 * DATALINK_PACKET_LENGTH * 2;
+		initialized = true;
     }
-    return link1;
 }
 
 
@@ -72,29 +83,113 @@ Datalink& Datalink::initDatalink(Datalink::baudRate rate){
  * 
  * @return True if all data were sent, false otherwise
  */
-bool Datalink::sendData(uint8_t data[packetLength]){
-	memcpy(datalinkPacket, data, packetLength);
+bool Datalink::sendPacket(Packet& packet){
+	memcpy(datalinkPacket, packet.rawData, PACKET_LENGTH);
 	calculateCRC(datalinkPacket, false);
-	return uart_send(datalinkPacket, packetLength + 1) == packetLength + 1;
+	if (uart_send(datalinkPacket, DATALINK_PACKET_LENGTH) != DATALINK_PACKET_LENGTH){
+		errorMsg = errorMessages[sendBufferFull];
+		return false;
+	};
+	return true;
 }
 
 /**
- * @brief Receives data through physical interface
+ * @brief Receives packet through physical interface.
  * 
- * @return True if enough bytes were received and CRCs match, false otherwise
+ * @return 0 if no packet was received, 1 if packet was received and is for this participant,
+ * 2 if reply for previus packet was received,
+ * 3 if packet is for different participant, 
+ * 4 if error occurred (errorMsg is set in this case).
  */
-bool Datalink::recvData(uint8_t data[packetLength]){
-	int recvNum = uart_recv(datalinkPacket, packetLength + 1);
-	if (recvNum == packetLength + 1 && calculateCRC(datalinkPacket, true) == true){
-		memcpy(data, datalinkPacket, packetLength + 1);
-		return true;
+Datalink::recvPacketState Datalink::recvPacket(Packet& packet){
+	//No packet
+	if (uart_is_RX_empty() == true){
+		return noPacket;
 	}
-	return false;
+
+	//Reciving packet
+	int recvNum = 0;
+	packetReceiveTimer->startTimerUs(packetReceiveTimeUS);
+	while (recvNum < DATALINK_PACKET_LENGTH && packetReceiveTimer->isDone() == false){
+		recvNum += uart_recv(datalinkPacket + recvNum, DATALINK_PACKET_LENGTH - recvNum);
+	}
+
+	//Check for errors
+	if (recvNum != DATALINK_PACKET_LENGTH){
+		errorMsg = errorMessages[notEnoughBytes];
+		return error;
+	}
+	if (calculateCRC(datalinkPacket, true) == false){
+		errorMsg = errorMessages[crcError];
+		return error;
+	}
+	memcpy(packet.rawData, datalinkPacket, PACKET_LENGTH);
+
+	//Packet is for this participant
+	if (packet.distance == 0){
+
+		//Received reply packet
+		if (packet.reply == true){
+			return replyReceived;
+		}
+
+		//Replying is on
+		else if (replying == true && packet.function != checkTopology){
+			packet.reply = true;
+			if (packet.direction == false){
+				packet.direction = true;
+				packet.distance = nodeNum - 1;
+			}
+			else {
+				packet.direction = false;
+				packet.distance = 0;
+			}
+
+			if (sendPacket(packet) == false){
+				return error;
+			}
+		}
+
+		return packetReceived;
+	}
+
+	//Sends packet to next participant
+	else {
+		packet.distance--;
+		if (sendPacket(packet) == false){
+			return error;
+		}
+		return packetForOtherParticipant;
+	}
 }
 
+/**
+ * @brief Flushes RX buffer
+*/
 void Datalink::flushRX(){
 	uint8_t dummy = 0;
 	while (uart_recv(&dummy, 1) > 0);
+}
+
+bool Datalink::initTopology(uint8_t participants, uint8_t myPayload, bool requireReply){
+	nodeNum = participants;
+	replying = requireReply;
+
+	Packet packet(nodeNum - 1, checkTopology, myPayload, false);
+	uint8_t payloads[nodeNum-1] = {0};
+
+	if (Datalink::sendPacket(packet) == false){
+		return false;
+	}
+
+	for (uint8_t i = 0; i < nodeNum - 1; ++i){
+		if (Datalink::recvPacket(packet) == false){
+			return false;
+		}
+		payloads[i] = packet.payload;
+	}
+
+	return false;
 }
 
 

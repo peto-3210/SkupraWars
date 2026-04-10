@@ -3,21 +3,21 @@
 
 SoftwareTimer SoftwareTimerPool::timerList[MAX_TIMER_NUM] = {};
 bool SoftwareTimerPool::initialized = false;
+uint32_t SoftwareTimerPool::lastTimestamp = 0;
+uint8_t SoftwareTimerPool::timerNum = 0;
 
-SoftwareTimerPool& SoftwareTimerPool::initTimerPool(uint8_t periodUs){
-    static SoftwareTimerPool pool1;
+void SoftwareTimerPool::initTimerPool(uint8_t periodUs){
     if (initialized == false){
         hardware_timer_init(periodUs);
         initialized = true;
     }
-    return pool1;
 }
 
-SoftwareTimer& SoftwareTimerPool::acquireTimer(){
+SoftwareTimer* SoftwareTimerPool::acquireTimer(){
     if (timerNum < MAX_TIMER_NUM){
-        return timerList[timerNum++];
+        return &(timerList[timerNum++]);
     }
-    return timerList[MAX_TIMER_NUM];
+    return nullptr;
 }
 
 
@@ -42,4 +42,7 @@ void SoftwareTimer::startTimerUs(uint32_t value){
 
 bool SoftwareTimer::isDone(){
     return value == 0;
+}
+void SoftwareTimer::stop(){
+    value = 0;
 }
