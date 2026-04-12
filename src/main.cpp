@@ -34,7 +34,7 @@ int main(void)
 	SoftwareTimerPool::initTimerPool(10);
 	SoftwareTimer* timer1 = SoftwareTimerPool::acquireTimer();
 	SoftwareTimer* btnTimer = SoftwareTimerPool::acquireTimer();
-	Soundboard::initSoundboard(false);
+	Soundboard::initSoundboard();
 	Soundboard::playMelody(Soundboard::imperialMarch);
 	
 	timer1->startTimerUs(500000);
