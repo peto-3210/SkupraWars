@@ -91,6 +91,10 @@ ISR(USART_UDRE_vect){
     }
 }
 
+bool uart_is_rx_empty(){
+    return rx_handler.iterator == 0;
+}
+
 
 
 
