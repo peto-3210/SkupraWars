@@ -24,7 +24,7 @@ int main(void)
 	uart_begin(8);
 	spi_init();
 	st7735_init();
-	st7735_fill_screen(0xFFFF);
+	st7735_fill_screen(0x001F); // 0x001F - blue; 0xFFFF - red
 
 	// Enkodér - vstupy a pull-up rezistory
 	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4));
