@@ -22,7 +22,7 @@ int main(void)
     //_delay_us(20);
     SoftwareTimer* timer1 = SoftwareTimerPool::acquireTimer();
     
-    Soundboard::initSoundboard(false);
+    Soundboard::initSoundboard();
 
   //_delay_ms(2000);
   //debug_init();

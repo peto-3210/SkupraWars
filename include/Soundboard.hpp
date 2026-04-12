@@ -3,9 +3,9 @@
 #ifndef SOUNDOARD
 #define SOUNDBOARD
 
-#define SOUNDBOARD_OUTPUT_PIN_PORT PORTD
-#define SOUNDBOARD_OUTPUT_PIN_DDR DDRD
-#define SOUNDBOARD_OUTPUT_PIN_NUM 7
+#define SOUNDBOARD_OUTPUT_PIN_PORT PORTB
+#define SOUNDBOARD_OUTPUT_PIN_DDR DDRB
+#define SOUNDBOARD_OUTPUT_PIN_NUM 1
 
 enum tone: uint16_t {
     none = 0,
@@ -61,6 +61,7 @@ class Sound {
      */
     toneRecord* getCurrentToneRecord(){
         if (iterator == toneNum){
+            iterator = 0;
             return nullptr;
         }
         return &(toneList[iterator++]);
@@ -131,9 +132,9 @@ class Soundboard {
     /**
      * @brief Initializes soundboard.
      * 
-     * @param useHardware Whether to use hardware timer for tone generation
+     * @param hardwarePWM Whether to use hardware timer for tone generation
      */
-    static void initSoundboard(bool useHardware = true);
+    static void initSoundboard(bool hardwarePWM = true);
 
     /**
      * @brief Plays a sound.

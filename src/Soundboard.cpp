@@ -12,8 +12,9 @@ Sound4* Soundboard::currentSound = nullptr;
 Melody* Soundboard::currentMelody = nullptr;
 toneRecord* Soundboard::currentRecord = nullptr;
 
-void Soundboard::initSoundboard(bool useHardware){
-    if (useHardware == true){
+void Soundboard::initSoundboard(bool hardwarePWM){
+    if (hardwarePWM == true){
+        useHardware = hardwarePWM;
         hardware_pwm_init();
     }
     else {
@@ -63,6 +64,7 @@ void Soundboard::play(){
             //Sound finished
             if (currentRecord == nullptr){
                 currentSound = nullptr;
+                isPlaying = false;
             }
 
             //Start next tone
@@ -83,6 +85,7 @@ void Soundboard::play(){
             //Melody finished
             if (currentRecord == nullptr){
                 currentMelody = nullptr;
+                isPlaying = false;
             }
 
             //Start next tone
