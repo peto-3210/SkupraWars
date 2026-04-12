@@ -225,6 +225,9 @@
     <Compile Include="include\SoftwareTimer.hpp">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\Soundboard.hpp">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\Datalink.cpp">
       <SubType>compile</SubType>
     </Compile>
@@ -246,7 +249,13 @@
     <Compile Include="src\Messenger.cpp">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\Playlist.cpp">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\SoftwareTimer.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\Soundboard.cpp">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
