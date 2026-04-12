@@ -101,11 +101,8 @@ class Soundboard {
     Soundboard(const Soundboard&) = delete;
     Soundboard& operator=(const Soundboard&) = delete;
 
-    static SoftwareTimer* pwmTimer;
     static SoftwareTimer* toneTimer;
-    static bool pwmIsHigh;
     static bool isPlaying;
-    static bool useHardware;
 
     static Sound4* currentSound;
     static Melody* currentMelody;
@@ -117,7 +114,6 @@ class Soundboard {
     static Melody melodyList[melodyNum];
 
     static void initPlaylist();
-    static void playTone();
 
     public:
 
@@ -131,10 +127,8 @@ class Soundboard {
 
     /**
      * @brief Initializes soundboard.
-     * 
-     * @param hardwarePWM Whether to use hardware timer for tone generation
      */
-    static void initSoundboard(bool hardwarePWM = true);
+    static void initSoundboard();
 
     /**
      * @brief Plays a sound.
