@@ -4,16 +4,22 @@ bool kkt = false;
 
 SoftwareTimer* Soundboard::pwmTimer = nullptr;
 SoftwareTimer* Soundboard::toneTimer = nullptr;
-bool Soundboard::isHigh = false;
+bool Soundboard::pwmIsHigh = false;
 bool Soundboard::isPlaying = false;
+bool Soundboard::useHardware = false;
 
 Sound4* Soundboard::currentSound = nullptr;
 Melody* Soundboard::currentMelody = nullptr;
 toneRecord* Soundboard::currentRecord = nullptr;
 
-void Soundboard::initSoundboard(){
-    SOUNDBOARD_OUTPUT_PIN_DDR |= (1 << SOUNDBOARD_OUTPUT_PIN_NUM);
-    pwmTimer = SoftwareTimerPool::acquireTimer();
+void Soundboard::initSoundboard(bool useHardware){
+    if (useHardware == true){
+        hardware_pwm_init();
+    }
+    else {
+        SOUNDBOARD_OUTPUT_PIN_DDR |= (1 << SOUNDBOARD_OUTPUT_PIN_NUM);
+        pwmTimer = SoftwareTimerPool::acquireTimer();
+    }
     toneTimer = SoftwareTimerPool::acquireTimer();
     initPlaylist();
 }
@@ -24,12 +30,12 @@ void Soundboard::initSoundboard(){
 void Soundboard::playTone(){
     if (pwmTimer->isDone() == true && currentRecord != nullptr){
 
-        if (isHigh == false){
-            isHigh = true;
+        if (pwmIsHigh == false){
+            pwmIsHigh = true;
             SOUNDBOARD_OUTPUT_PIN_PORT |= (1 << SOUNDBOARD_OUTPUT_PIN_NUM);
         }
         else {
-            isHigh = false;
+            pwmIsHigh = false;
             SOUNDBOARD_OUTPUT_PIN_PORT &= ~(1 << SOUNDBOARD_OUTPUT_PIN_NUM);
         }
 
@@ -40,28 +46,29 @@ void Soundboard::playTone(){
 void Soundboard::play(){
     //Stop playing
     if (isPlaying == false){
+        toneTimer->stop();
         currentRecord = nullptr;
     }
 
     //Playing sound
     else if (currentSound != nullptr){
 
-        //No tone is playing - starting new one
+        //No tone is playing
         if (currentRecord == nullptr){
             kkt = !kkt;
             if (kkt == true) PORTD |= (1 << 6);
             else PORTD &= ~(1 << 6);
-
-            pwmTimer->stop();
-            toneTimer->stop();
             currentRecord = currentSound->getCurrentToneRecord();
 
             //Sound finished
             if (currentRecord == nullptr){
                 currentSound = nullptr;
             }
+
+            //Start next tone
             else {
                 toneTimer->startTimerUs((uint32_t)currentRecord->toneDuration * 1000);
+                if (useHardware == true) hardware_pwm_set(currentRecord->singleTone);
             }
         }
     }
@@ -69,18 +76,19 @@ void Soundboard::play(){
     //Playing melody
     else if (currentMelody != nullptr){
 
-        //No tone is playing - starting new one
+        //No tone is playing
         if (currentRecord == nullptr){
-            pwmTimer->stop();
-            toneTimer->stop();
             currentRecord = currentMelody->getCurrentToneRecord();
 
             //Melody finished
             if (currentRecord == nullptr){
                 currentMelody = nullptr;
             }
+
+            //Start next tone
             else {
                 toneTimer->startTimerUs((uint32_t)currentRecord->toneDuration * 1000);
+                if (useHardware == true) hardware_pwm_set(currentRecord->singleTone);
             }
         }
     }
@@ -88,10 +96,18 @@ void Soundboard::play(){
     //Tone finished
     if (toneTimer->isDone() == true){
         currentRecord = nullptr;
-        isHigh = false;
-        SOUNDBOARD_OUTPUT_PIN_PORT &= ~(1 << SOUNDBOARD_OUTPUT_PIN_NUM);
+        if (useHardware == true){
+            hardware_pwm_reset();
+        }
+        else {
+            pwmTimer->stop();
+            pwmIsHigh = false;
+            SOUNDBOARD_OUTPUT_PIN_PORT &= ~(1 << SOUNDBOARD_OUTPUT_PIN_NUM);
+        }
     }
-    else {
+
+    //Tone playing
+    else if (useHardware == false) {
         playTone();
     }
 }

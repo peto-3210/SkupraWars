@@ -11,7 +11,7 @@
 int main(void)
 {
     sei();
-    DDRB = 0b00111111;
+    DDRB = 0b00100010;
     DDRD = 0b01000000;
     PORTB = 0b00000000;
     uart_begin(8);
@@ -22,7 +22,7 @@ int main(void)
     //_delay_us(20);
     SoftwareTimer* timer1 = SoftwareTimerPool::acquireTimer();
     
-    Soundboard::initSoundboard();
+    Soundboard::initSoundboard(false);
 
   //_delay_ms(2000);
   //debug_init();

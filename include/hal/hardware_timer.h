@@ -20,6 +20,23 @@ It initializes hardware timer and provides exact timestamps when requested.
 void hardware_timer_init(uint8_t period);
 
 /**
+ * @brief Iitializes hardware PWM timer
+ */
+void hardware_pwm_init();
+
+/**
+ * @brief Sets timer with specified frequency
+ * 
+ * @param freq Desired frequency
+ */
+void hardware_pwm_set(uint16_t freq);
+
+/**
+ * @brief Stops pwm timer
+ */
+void hardware_pwm_reset();
+
+/**
  * @brief Retrieve number of microseconds from internal counter
  * 
  * @return Number of microseconds

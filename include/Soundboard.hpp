@@ -102,8 +102,9 @@ class Soundboard {
 
     static SoftwareTimer* pwmTimer;
     static SoftwareTimer* toneTimer;
-    static bool isHigh;
+    static bool pwmIsHigh;
     static bool isPlaying;
+    static bool useHardware;
 
     static Sound4* currentSound;
     static Melody* currentMelody;
@@ -129,8 +130,10 @@ class Soundboard {
 
     /**
      * @brief Initializes soundboard.
+     * 
+     * @param useHardware Whether to use hardware timer for tone generation
      */
-    static void initSoundboard();
+    static void initSoundboard(bool useHardware = true);
 
     /**
      * @brief Plays a sound.
