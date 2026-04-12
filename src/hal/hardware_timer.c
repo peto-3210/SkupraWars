@@ -21,21 +21,24 @@ void hardware_timer_init(uint8_t period){
 void hardware_pwm_init(){
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
         DDRB |= 0b00000010; //Enables OC1A pin
-        TCCR1A = 0b01000000; //Allow output on OC1A
         TCNT1 = 0;
         OCR1A = 0;
         TIMSK1 = 0;
-        TCCR1B = 0b00001000; //Set CTC mode
     }
 }
 
-void hardware_pwm_set(uint16_t freq){
-    uint16_t ocr = 16000000 / (256* (uint32_t)freq * 2) - 1;
+void hardware_pwm_set(uint32_t freq){
+    uint32_t ocr = (16000000UL / (256UL * freq * 2)) - 1;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-        TCNT1 = 0;
-        OCR1A = ocr;
-        TCCR1A = 0b01000000; //Allow output on OC1A
-        TCCR1B |= 0b00000100; //Set 256 clock divider
+        TCCR1B = 0b00001000;   // Stop clock, keep CTC mode
+        TCNT1  = 0;
+        OCR1A  = ocr & 0xffff;
+
+        //TCCR1A = 0b10000000;   // COM1A = 10 (clear on match) temporarily
+        //TCCR1C = (1 << FOC1A); // Force compare - drive OC1A LOW, sets flip-flop to 0
+
+        TCCR1A = 0b01000000;   // Toggle OC1A on compare match
+        TCCR1B = 0b00001100;   // CTC (WGM12) + prescaler 256
     }
 }
 

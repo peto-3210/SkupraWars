@@ -29,7 +29,7 @@ void hardware_pwm_init();
  * 
  * @param freq Desired frequency
  */
-void hardware_pwm_set(uint16_t freq);
+void hardware_pwm_set(uint32_t freq);
 
 /**
  * @brief Stops pwm timer
