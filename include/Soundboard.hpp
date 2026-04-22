@@ -9,8 +9,10 @@
 
 enum tone: uint16_t {
     none = 0,
+	dS = 250,
     c = 261,
     d = 294,
+	cS = 300,
     e = 329,
     f = 349,
     g = 391,
@@ -123,6 +125,9 @@ class Soundboard {
 
     enum melodies {
         imperialMarch,
+		snakeJazz,
+		alorsOnDanse
+		
     };
 
     /**

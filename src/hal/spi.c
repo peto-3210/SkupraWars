@@ -2,7 +2,7 @@
 
 void spi_init(void) {
     // Nastavení pinů pro SPI jako výstupní:
-    // PB2 (SS/CS), PB3 (MOSI), PB5 (SCK)
+    // PB2 (CS), PB3 (MOSI), PB5 (SCK)
     DDRB |= (1 << PB2) | (1 << PB3) | (1 << PB5);
     
     // MISO (PB4) je vstupní (pro jistotu, i když výchozí stav to zajišťuje)
@@ -12,7 +12,7 @@ void spi_init(void) {
     PORTB |= (1 << PB2);
 
     // Nastavení SPI kontrolního registru (SPCR):
-    // SPE = SPI Enable (zapnutí SPI)
+    // SPE = SPI Enable 
     // MSTR = Master (jsme pánem komunikace)
     // SPR0 a SPR1 = 0 (tím společně s SPI2X=1 nastavíme max. rychlost)
     SPCR = (1 << SPE) | (1 << MSTR);
