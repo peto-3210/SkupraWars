@@ -23,7 +23,6 @@ class Datalink {
     enum recvPacketState{
         noPacket,
         packetReceived,
-        replyReceived,
         packetForOtherParticipant,
         packetError,
     };
@@ -39,7 +38,7 @@ class Datalink {
     union announcePayload{
         uint8_t rawData;
         struct {
-            uint8_t payload            :6;
+            uint8_t payload         :6;
             announcementType type   :2;
         };
     };
@@ -118,7 +117,7 @@ class Datalink {
      * 
     **/
     union Packet {
-        uint8_t rawData[2];
+        uint8_t rawPacket[2];
         struct {
             uint8_t function    :2;
             uint8_t dummy       :1;
@@ -145,6 +144,11 @@ class Datalink {
         }
     };
 
+    struct replyBufferEntry{
+        Packet sentPacket;
+        uint32_t timestamp;
+    };
+
     typedef enum {
         sendBufferFull,
         notEnoughBytes,
@@ -153,23 +157,26 @@ class Datalink {
         unknownParticipant,
         multipleIdentification,
         missingReply,
-        unknownMessage,
+        replyBufferFull,
     } commError;
 
-    static constexpr const char* errorMessages[8] = {
+    static constexpr const char* errorMessages[] = {
         "Send buffer full.",
         "Not enough bytes received.",
         "CRC error in message.",
         "Topology ring is not closed.",
-        "Missing initialization message from participant with distance:",
+        "Missing initialization message from participant.",
         "Received two identical initialization messages."
-        "Missing reply from participant:",
-        "Unsolicited reply.",
+        "Missing reply from participant.",
+        "Pending reply buffer full.",
     };
 
     static const uint8_t PACKET_LENGTH = 2;
     static const uint8_t DATALINK_PACKET_LENGTH = 3;
     static const uint8_t MAX_PARTICIPANTS = 8;
+    
+    static const uint8_t PENDING_REPLY_BUFFER_SIZE = 4;
+    static const uint32_t REPLY_TIMEOUT_US = 10000;
 
     static bool initialized;
     static bool replying;
@@ -177,11 +184,11 @@ class Datalink {
     static uint8_t nodes[MAX_PARTICIPANTS];
     
     static uint8_t datalinkPacket[DATALINK_PACKET_LENGTH];
-    static uint32_t packetReceiveTimeUS;
+    static uint32_t packetReceiveTimeoutUS;
     static SoftwareTimer* dataReceiveTimer;
 
-    static SoftwareTimer* packetTimer;
-    static bool waitingForReply;
+    static replyBufferEntry pendingReplyBuffer[PENDING_REPLY_BUFFER_SIZE];
+    static uint8_t pendingReplyNumber;
 
     static const char* errorMsg;
     static uint8_t errorData;

@@ -34,20 +34,34 @@ class SoftwareTimer{
      * 
      * @param value Initial value of countdown.
      */
-    void startTimerUs(uint32_t value);
-
+    inline void startTimerUs(uint32_t value){
+        this->value = value;
+    }
 
     /**
      * @brief Retrieves current state of timer.
      * 
      * @return True if timer finished, false otherwise.
      */
-    bool isDone();
+    inline bool isDone(){
+        return value == 0;
+    }
 
     /**
      * @brief Immediately stops timer.
      */
-    void stop();
+    inline void stop(){
+        value = 0;
+    }
+
+    /**
+     * @brief Retrieves current timestamp in microseconds.
+     * 
+     * @return Current timestamp.
+     */
+    inline static uint32_t getTimestampUs(){
+        return micros();
+    }
 };
 
 class SoftwareTimerPool{
@@ -84,7 +98,6 @@ class SoftwareTimerPool{
      * if no timer is available.
      */
     static SoftwareTimer* acquireTimer();
-
 
     /**
      * @brief Main timing function, must be called periodically in a loop.

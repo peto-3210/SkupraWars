@@ -42,14 +42,3 @@ void SoftwareTimerPool::busyWaitUs(uint32_t periodUs){
         tick();
     }
 }
-
-void SoftwareTimer::startTimerUs(uint32_t value){
-    this->value = value;
-}
-
-bool SoftwareTimer::isDone(){
-    return value == 0;
-}
-void SoftwareTimer::stop(){
-    value = 0;
-}
