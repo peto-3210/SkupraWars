@@ -1,4 +1,5 @@
 #include "SoftwareTimer.hpp"
+#include <avr/pgmspace.h>
 
 #ifndef SOUNDOARD
 #define SOUNDBOARD
@@ -30,15 +31,23 @@ enum tone: uint16_t {
     aH = 880,
 };
 
+/*In C/C++, aggregate initialization fills members in order, 
+stopping when the initializer list runs out. The rest are zero-initialized. 
+For a union, only the first member is considered for initialization.*/
+
 struct toneRecord{
-    tone singleTone;
-    uint16_t toneDuration;
+    union {
+        struct {
+            tone singleTone;
+            uint16_t toneDuration;
+        };
+        uint32_t rawData;
+    };
 
     toneRecord() = default;
 
-    toneRecord(tone t, uint16_t d){
-        singleTone = t;
-        toneDuration = d;
+    bool isNull(){
+        return singleTone == none && toneDuration == 0;
     }
 };
 
@@ -47,10 +56,9 @@ class Sound {
     friend class Soundboard;
 
     private:
-    toneRecord toneList[soundLength];
+    const toneRecord* toneList;
 
     uint8_t toneNum = 0;
-    bool finished = false;
     uint8_t iterator = 0;
 
     /**
@@ -59,37 +67,37 @@ class Sound {
      * 
      * @return Current Tone
      */
-    toneRecord* getCurrentToneRecord(){
+    toneRecord getCurrentToneRecord(){
         if (iterator == toneNum){
             iterator = 0;
-            return nullptr;
+            return (toneRecord){};
         }
-        return &(toneList[iterator++]);
+        toneRecord rec;
+        rec.rawData = pgm_read_dword(&toneList[iterator++]);
+        return rec;
     }
 
     public:
     Sound() = default;  
 
     /**
-     * @brief Adds tone with duration to the sound.
+     * @brief Sets the array of tones. Due to its size, tone array
+     * is stored in flash memory.
      * 
-     * @param Tone Type of tone
-     * @param duration Duration of tone in milliseconds
+     * Structure of tone:
+     * {Type of tone, Duration of tone in milliseconds}
+     * @param toneBuffer Pointer to the array of tones stored in flash memory
+     * @param num Number of tones in the array
      * 
-     * @return False if sound is full, true otherwise.
      */
-    bool addTone(tone singleTone, uint16_t toneDuration){
-        if (toneNum < soundLength && finished == false){
-            toneList[toneNum] = toneRecord(singleTone, toneDuration);
-            toneNum++;
-            return true;
-        }
-        return false;
+    inline void setToneBuffer(const toneRecord* toneBuffer, uint8_t num){
+        toneList = toneBuffer;
+        toneNum = num;
     }; 
 };
 
 using Sound4 = Sound<4>;
-using Melody = Sound<32>;
+using Melody = Sound<64>;
 
 class Soundboard {
 
@@ -106,7 +114,7 @@ class Soundboard {
 
     static Sound4* currentSound;
     static Melody* currentMelody;
-    static toneRecord* currentRecord;
+    static toneRecord currentRecord;
 
     static const uint8_t soundNum = 4;
     static Sound4 soundList[soundNum];
@@ -123,6 +131,7 @@ class Soundboard {
 
     enum melodies {
         imperialMarch,
+        halucination,
     };
 
     /**

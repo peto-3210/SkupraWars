@@ -90,7 +90,12 @@ class SoftwareTimerPool{
      * @brief Main timing function, must be called periodically in a loop.
      */
     static void tick();
-    
+
+    /**
+     * @brief Waits for specified time period inside a loop, without exiting the blocking function.
+     * The timers are still ticking even during the busy wait.
+     */
+    static void busyWaitUs(uint32_t periodUs);
 };
 
 #endif

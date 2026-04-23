@@ -7,10 +7,17 @@
 class Datalink {
     public:
     enum functionCode{
-        checkTopology,
-        shootProjectile,
-        announceHP,
-        reserved
+        announceFun,
+        shootProjectileFun,
+        tellHPFun,
+        specialFun
+    };
+
+    enum announcementType{
+        topologyInitAnn,
+        songSyncAnn,
+        projectileHitAnn,
+        reservedAnn,
     };
 
     enum recvPacketState{
@@ -18,8 +25,68 @@ class Datalink {
         packetReceived,
         replyReceived,
         packetForOtherParticipant,
-        error,
+        packetError,
     };
+
+    /*Announcement packet:
+    | ANNOUNCEMENT TYPE (2 bits) | PAYLOAD (6 bits) |
+
+    Possible announcement types:
+    - Topology initialization: Payload is self-identification payload, which can be used to identify participants
+    - Song synchronization: Payload is the current position in the song, which can be used to synchronize music playback
+    - Projectile hit: Payload is the position of the hit
+    */
+    union announcePayload{
+        uint8_t rawData;
+        struct {
+            uint8_t payload            :6;
+            announcementType type   :2;
+        };
+    };
+
+    /*
+    Projectile packet:
+    | PROJECTILE TYPE (2 bits) | POSITION (6 bits) |
+
+    Possible projectile types:
+    - Torpedo: Normal projectile
+    - Missisle: Slow but powerful with splash damage
+    - Laser: Instant projectile with long cooldown
+    - Grenade: Weaker, but fired in burst of 5
+    */
+    union projectilePayload{
+        uint8_t rawData;
+        struct {
+            uint8_t position    :6;
+            uint8_t type        :2;
+        };
+    };
+
+    /*
+    HP packet:
+    | YOU_HIT_ME (1 bit) | HP (7 bits) |
+
+    YOU_HIT_ME bit is set to 1 when the sender is hit by a projectile from receiver, and 0 otherwise.
+    */
+    union hpPayload{
+        uint8_t rawData;
+        struct {
+            uint8_t hp          :7;
+            uint8_t youHitMe    :1;
+        };
+    };
+
+    union specialPayload{
+        uint8_t rawData;
+        struct {
+            uint8_t position    :6;
+            uint8_t type        :2;
+        };
+    };
+
+
+
+
 
     private:
     // Private Constructor
@@ -29,58 +96,93 @@ class Datalink {
     Datalink(const Datalink&) = delete;
     Datalink& operator=(const Datalink&) = delete;
 
+    /**
+     * @brief Union representing a data packet:
+     * 
+     * | HEADER (1 byte) | PAYLOAD (1 byte) | CRC (1 byte) |
+     * 
+     * Header:
+     * 
+     * | FUNCTION (2 bits) | DUMMY (1 bit) | REPLY (1 bit) | DIRECTION (1 bit) | DISTANCE (3 bits)
+     * 
+     * @param FUNCTION Function code of the packet, which determines how the payload should be interpreted
+     * @param DUMMY: Dummy bit, reserved for future use
+     * @param REPLY: Whether the packet is a reply to a previous packet. Reply packets are sent in response to received packets when replying is on, 
+     * and have the same function code and payload as the original packet.
+     * @param DIRECTION: Direction of the packet, which determines the direction in which the packet is sent and received. 
+     * 0 for packet sent in direction of participant with distance 0, 1 for opposite direction.
+     * @param DISTANCE: Distance to the sender of the packet. Highest number (7) means broadcast message, 0 means packet from participant with distance 0, etc.
+     * @param PAYLOAD: The payload of the packet, which contains the actual data being transmitted.
+     * 
+     * @note The CRC part is only visible to the physical layer, and is not included in the Packet struct. 
+     * 
+    **/
     union Packet {
         uint8_t rawData[2];
         struct {
             uint8_t function    :2;
-            uint8_t direction   :1; // 0 for packet sent in direction of participant with distance 0, 1 for opposite direction
+            uint8_t dummy       :1;
             uint8_t reply       :1;
-            uint8_t reserved    :1;
-            uint8_t distance    :3;
+            uint8_t direction   :1; // 0 for packet sent in direction of participant with distance 0, 1 for opposite direction
+            uint8_t distance    :3; // Highest number means broadcast message
 
-            uint8_t payload;
+            union {
+                uint8_t rawPayload;
+                announcePayload announcement;
+                projectilePayload projectile;
+                hpPayload hp;
+                specialPayload special;
+            };
         };
         Packet() = default;
-        Packet(uint8_t distance, functionCode func, uint8_t payload, bool direction, bool reply = false){
+        Packet(uint8_t distance, functionCode func, uint8_t rawPayload, bool direction, bool reply = false){
             this->function = func;
-            this->reserved = 0;
+            this->dummy = 0;
             this->reply = reply;
             this->direction = direction;
             this->distance = distance;
-            this->payload = payload;
+            this->rawPayload = rawPayload;
         }
     };
 
-    enum commError{
+    typedef enum {
         sendBufferFull,
         notEnoughBytes,
         crcError,
         ringNotClosed,
         unknownParticipant,
+        multipleIdentification,
         missingReply,
         unknownMessage,
-    };
+    } commError;
 
-    static constexpr const char* errorMessages[7] = {
+    static constexpr const char* errorMessages[8] = {
         "Send buffer full.",
         "Not enough bytes received.",
         "CRC error in message.",
         "Topology ring is not closed.",
         "Missing initialization message from participant with distance:",
+        "Received two identical initialization messages."
         "Missing reply from participant:",
         "Unsolicited reply.",
     };
 
+    static const uint8_t PACKET_LENGTH = 2;
+    static const uint8_t DATALINK_PACKET_LENGTH = 3;
+    static const uint8_t MAX_PARTICIPANTS = 8;
+
     static bool initialized;
     static bool replying;
     static uint8_t nodeNum;
-
-    static const uint8_t PACKET_LENGTH = 2;
-    static const uint8_t DATALINK_PACKET_LENGTH = 3;
+    static uint8_t nodes[MAX_PARTICIPANTS];
+    
     static uint8_t datalinkPacket[DATALINK_PACKET_LENGTH];
-
     static uint32_t packetReceiveTimeUS;
-    static SoftwareTimer* packetReceiveTimer;
+    static SoftwareTimer* dataReceiveTimer;
+
+    static SoftwareTimer* packetTimer;
+    static bool waitingForReply;
+
     static const char* errorMsg;
     static uint8_t errorData;
 
@@ -88,6 +190,15 @@ class Datalink {
     static bool sendPacket(Packet& packet);
     static recvPacketState recvPacket(Packet& packet); 
     static void flushRX();
+    
+    /**
+     * @brief Sets error message
+     * 
+     * @param err Error message
+     */
+    static void setError(commError err){
+        errorMsg = errorMessages[err];
+    }
 
     public:
     enum baudRate{
@@ -100,8 +211,11 @@ class Datalink {
      * @brief Initializes physical layer
      * 
      * @param rate Baud rate
+     * @param requireReply Whether to require replies from other participants 
+     * 
+     * @note Replying is always off for the broadcast packets
      */
-    static void initDatalink(baudRate rate);
+    static void initDatalink(baudRate rate, bool requireReply = false);
 
     /**
      * @brief Function sends packet to tell everyone
@@ -111,9 +225,8 @@ class Datalink {
      * 
      * @param participants Total number of participants in topology, including self.
      * @param myPayload Self-identification payload.
-     * @param requireReply Whether to require replies from other participants (except of function code 0)
      */
-    static bool initTopology(uint8_t participants, uint8_t myPayload, bool requireReply = false);
+    static bool initTopology(uint8_t participants, uint8_t myPayload);
 
 };
 
