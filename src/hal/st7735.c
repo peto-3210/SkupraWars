@@ -17,8 +17,8 @@ void st7735_write_data(uint8_t data) {
 }
 
 void st7735_init(void) {
-    // Nastavení pinů DC (PB4) a RST (PB0) jako výstupy
-    DDRB |= (1 << PB4) | (1 << PB0); // change from PB1 to PB4
+    // Nastavení pinů DC (PB1) a RST (PB0) jako výstupy
+    DDRB |= (1 << PB1) | (1 << PB0); 
     
     // 1. Hardwarový reset
     ST7735_RST_HIGH();
@@ -39,6 +39,11 @@ void st7735_init(void) {
     // 4. Nastavení formátu barev na 16-bit / pixel (Command 0x3A)
     st7735_write_command(0x3A);
     st7735_write_data(0x05); // 0x05 = 16-bit
+    
+    // --- NOVÉ: Orientace displeje ---
+    st7735_write_command(0x36);
+    st7735_write_data(0xC0); // 0xC0 otočí displej o 180°.
+    // (Zkus případně 0x00, 0x40, nebo 0x80, dokud to nebude sedět na tvůj hardware)
     
     // 5. Zapnutí displeje (Command 0x29)
     st7735_write_command(0x29);
