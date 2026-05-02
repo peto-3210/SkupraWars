@@ -211,7 +211,3 @@ bool Messenger::sendToNeighbour(Packet& packet, bool direction){
     packet.distance = iterator;
     return sendMessage(packet);
 }
-
-bool Messenger::announceMsg(announcePayload announcement, bool direction){
-
-}
