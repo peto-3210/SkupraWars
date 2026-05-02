@@ -1,7 +1,7 @@
 #pragma once
 #include "Gamestate.hpp"
 
-// Inicializuje menu (vykreslí ho poprvé)
+// Inicializuje menu
 void menu_init(void);
 
 // Stará se o scrollování a výběr

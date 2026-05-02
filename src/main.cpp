@@ -11,6 +11,7 @@
 #include "Menu.hpp"
 #include "Graphics.hpp"
 #include "Gameplay.hpp"
+#include "Soundboard.hpp"
 
 int main(void) {
 	sei();
@@ -31,9 +32,13 @@ int main(void) {
 	// Øízení stavù
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
+	
+	// Soundboard
+	Soundboard::initSoundboard();
 
 	while (1) {
 		SoftwareTimerPool::tick();
+		Soundboard::play();
 
 		// HLAVNÍ STAVOVÝ AUTOMAT
 		switch (current_state) {
@@ -50,7 +55,7 @@ int main(void) {
 					state_just_changed = true;
 				}
 				break;
-			} // <-- Zde blok konèí
+			} 
 
 			case STATE_GAMEPLAY: { 
 				if (state_just_changed) {

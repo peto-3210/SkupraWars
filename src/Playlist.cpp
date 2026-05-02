@@ -1,100 +1,85 @@
 #include "Soundboard.hpp"
+#include <avr/pgmspace.h>
 
+#define AoD_BPM    160
+#define AoD_Q      (60000 / AoD_BPM)
+#define AoD_E      (AoD_Q / 2)
+
+// Definice polí pro zvuky a melodie
 Sound4 Soundboard::soundList[soundNum] = {};
 Melody Soundboard::melodyList[melodyNum] = {};
 
+// Railgun: Rychlé vysoké pípnutí (default)
+const toneRecord sfx_railgun[] PROGMEM = {
+	{aH, 30},
+	{fH, 40},
+	{c, 20}
+};
+
+// Burst: Tøi krátká pípnutí (staccato)
+const toneRecord sfx_burst[] PROGMEM = {
+	{cH, 20},
+	{none, 20},
+	{cH, 20}
+};
+
+// Raketomet: Hluboký, delší zvuk (nabíhající)
+const toneRecord sfx_rocket[] PROGMEM = {
+	{gH, 15}, // Záblesk výbuchu
+	{c, 80},
+	{dS, 80},
+	{f, 150}
+};
+
+// Laser: Pulsace
+const toneRecord sfx_laser[] PROGMEM = {
+	{e, 60},
+	{f, 60},
+	{g, 60},
+	{f, 60},
+	{e, 60},
+	{e, 60},
+	{f, 60},
+	{g, 60},
+	{f, 60},
+	{e, 60}
+};
+
+const toneRecord sampleToneRecord[] PROGMEM = {
+	{a, 1000},
+	{gH, 1000},
+	{aH, 1000}
+};
+
+const toneRecord iMarchToneRecord[] PROGMEM = {
+	{a, 500},
+	{a, 500},
+	{a, 500},
+	{f, 350},
+	{cH, 150},
+	
+	{a, 500},
+	{f, 350},
+	{cH, 150},
+	{a, 1000},
+	{eH, 500},
+	
+	{eH, 500},
+	{eH, 500},
+	{fH, 350},
+	{cH, 150},
+	{gS, 500},
+	
+	{f, 350},
+	{cH, 150},
+	{a, 1000}
+};
+
 void Soundboard::initPlaylist(){
-
-    soundList[sample].addTone(a, 1000);
-    soundList[sample].addTone(gH, 1000);
-    soundList[sample].addTone(aH, 1000);
-
-    //Imperial march
-    melodyList[imperialMarch].addTone(a, 500); 
-    melodyList[imperialMarch].addTone(a, 500);
-    melodyList[imperialMarch].addTone(a, 500);
-    melodyList[imperialMarch].addTone(f, 350);
-    melodyList[imperialMarch].addTone(cH, 150);
-    
-    melodyList[imperialMarch].addTone(a, 500);
-    melodyList[imperialMarch].addTone(f, 350);
-    melodyList[imperialMarch].addTone(cH, 150);
-    melodyList[imperialMarch].addTone(a, 1000);
-    melodyList[imperialMarch].addTone(eH, 500);
-    
-    melodyList[imperialMarch].addTone(eH, 500);
-    melodyList[imperialMarch].addTone(eH, 500);
-    melodyList[imperialMarch].addTone(fH, 350);
-    melodyList[imperialMarch].addTone(cH, 150);
-    melodyList[imperialMarch].addTone(gS, 500);
-    
-    melodyList[imperialMarch].addTone(f, 350);
-    melodyList[imperialMarch].addTone(cH, 150);
-    melodyList[imperialMarch].addTone(a, 1000);
-	
-	
-	//snakejazz
-	melodyList[snakeJazz].addTone((tone)800, 80);
-	melodyList[snakeJazz].addTone((tone)1200, 60);
-	melodyList[snakeJazz].addTone((tone)600, 70);
-	melodyList[snakeJazz].addTone((tone)1400, 50);
-
-	melodyList[snakeJazz].addTone((tone)1000, 80);
-	melodyList[snakeJazz].addTone((tone)0, 30);
-
-	melodyList[snakeJazz].addTone((tone)1500, 40);
-	melodyList[snakeJazz].addTone((tone)900, 60);
-	melodyList[snakeJazz].addTone((tone)1300, 50);
-	melodyList[snakeJazz].addTone((tone)700, 80);
-
-	melodyList[snakeJazz].addTone((tone)1600, 40);
-	melodyList[snakeJazz].addTone((tone)500, 90);
-
-	// repeat-ish vibe
-	melodyList[snakeJazz].addTone((tone)800, 60);
-	melodyList[snakeJazz].addTone((tone)1100, 60);
-	melodyList[snakeJazz].addTone((tone)900, 60);
-	melodyList[snakeJazz].addTone((tone)1400, 60);
-	
-	
-	// Alors on danse (with groove + pauses)
-	// Phrase 1
-	melodyList[alorsOnDanse].addTone(gS, 180);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(gS, 180);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(e, 220);
-	melodyList[alorsOnDanse].addTone((tone)0, 30);
-
-	melodyList[alorsOnDanse].addTone(dS, 200);
-	melodyList[alorsOnDanse].addTone((tone)0, 60);
-
-	// Phrase 2 (repeat with slight variation feel)
-	melodyList[alorsOnDanse].addTone(gS, 180);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(gS, 180);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(e, 220);
-	melodyList[alorsOnDanse].addTone((tone)0, 30);
-
-	melodyList[alorsOnDanse].addTone(dS, 200);
-	melodyList[alorsOnDanse].addTone((tone)0, 80);
-
-	// Phrase 3 (lower part)
-	melodyList[alorsOnDanse].addTone(cS, 260);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(cS, 260);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(a, 260);
-	melodyList[alorsOnDanse].addTone((tone)0, 40);
-
-	melodyList[alorsOnDanse].addTone(e, 300);
-	melodyList[alorsOnDanse].addTone((tone)0, 120);
-    
+	soundList[sfx_railgun].setToneBuffer(sfx_railgun, sizeof(sfx_railgun) / sizeof(toneRecord));
+	soundList[sfx_burst].setToneBuffer(sfx_burst, sizeof(sfx_burst) / sizeof(toneRecord));
+	soundList[sfx_rocket].setToneBuffer(sfx_rocket, sizeof(sfx_rocket) / sizeof(toneRecord));
+	soundList[sfx_laser].setToneBuffer(sfx_laser, sizeof(sfx_laser) / sizeof(toneRecord));
+	soundList[sample].setToneBuffer(sampleToneRecord, sizeof(sampleToneRecord) / sizeof(toneRecord));
+	melodyList[imperialMarch].setToneBuffer(iMarchToneRecord, sizeof(iMarchToneRecord) / sizeof(toneRecord));
 }
