@@ -15,57 +15,57 @@ void Soundboard::initSoundboard(){
 }
 
 void Soundboard::play(){
-	//Stop playing
-	if (isPlaying == false){
-		toneTimer->stop();
-		currentRecord = {};
-	}
+    //Stop playing
+    if (isPlaying == false){
+        toneTimer->stop();
+        currentRecord = {};
+    }
 
 	//Playing sound
 	else if (currentSound != nullptr){
 
-		//No tone is playing
-		if (currentRecord.isNull()){
-			currentRecord = currentSound->getCurrentToneRecord();
+        //No tone is playing
+        if (currentRecord.isNull()){
+            currentRecord = currentSound->getCurrentToneRecord();
 
-			//Sound finished
-			if (currentRecord.isNull()){
-				currentSound = nullptr;
-				isPlaying = false;
-			}
+            //Sound finished
+            if (currentRecord.isNull()){
+                currentSound = nullptr;
+                isPlaying = false;
+            }
 
-			//Start next tone
-			else {
-				toneTimer->startTimerUs((uint32_t)currentRecord.toneDuration * 1000);
-				hardware_pwm_set(currentRecord.singleTone);
-			}
-		}
-	}
+            //Start next tone
+            else {
+                toneTimer->startTimerUs((uint32_t)currentRecord.toneDuration * 1000);
+                hardware_pwm_set(currentRecord.singleTone);
+            }
+        }
+    }
 
 	//Playing melody
 	else if (currentMelody != nullptr){
 
-		//No tone is playing
-		if (currentRecord.isNull()){
-			currentRecord = currentMelody->getCurrentToneRecord();
+        //No tone is playing
+        if (currentRecord.isNull()){
+            currentRecord = currentMelody->getCurrentToneRecord();
 
-			//Melody finished
-			if (currentRecord.isNull()){
-				currentMelody = nullptr;
-				isPlaying = false;
-			}
+            //Melody finished
+            if (currentRecord.isNull()){
+                currentMelody = nullptr;
+                isPlaying = false;
+            }
 
-			//Start next tone
-			else {
-				toneTimer->startTimerUs((uint32_t)currentRecord.toneDuration * 1000);
-				hardware_pwm_set(currentRecord.singleTone);
-			}
-		}
-	}
+            //Start next tone
+            else {
+                toneTimer->startTimerUs((uint32_t)currentRecord.toneDuration * 1000);
+                hardware_pwm_set(currentRecord.singleTone);
+            }
+        }
+    }
 
-	//Tone finished
-	if (toneTimer->isDone() == true){
-		currentRecord = {};
-		hardware_pwm_reset();
-	}
+    //Tone finished
+    if (toneTimer->isDone() == true){
+        currentRecord = {};
+        hardware_pwm_reset();
+    }
 }

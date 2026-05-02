@@ -81,6 +81,16 @@ uint8_t uart_send(uint8_t* data, uint8_t length){
     return length;
 }
 
+uint8_t uart_rx_bytenum(){
+    return rx_handler.iterator;
+}
+
+void uart_flush_rx(){
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        rx_handler.iterator = 0;
+    }
+}
+
 
 ISR(USART_UDRE_vect){
     if (tx_handler.iterator > 0){
@@ -91,9 +101,7 @@ ISR(USART_UDRE_vect){
     }
 }
 
-bool uart_is_rx_empty(){
-    return rx_handler.iterator == 0;
-}
+
 
 
 

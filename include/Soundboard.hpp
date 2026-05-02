@@ -33,24 +33,24 @@ enum tone: uint16_t {
     aH = 880,
 };
 
-/*In C/C++, aggregate initialization fills members in order,
-stopping when the initializer list runs out. The rest are zero-initialized.
+/*In C/C++, aggregate initialization fills members in order, 
+stopping when the initializer list runs out. The rest are zero-initialized. 
 For a union, only the first member is considered for initialization.*/
 
 struct toneRecord{
-	union {
-		struct {
-			tone singleTone;
-			uint16_t toneDuration;
-		};
-		uint32_t rawData;
-	};
+    union {
+        struct {
+            tone singleTone;
+            uint16_t toneDuration;
+        };
+        uint32_t rawData;
+    };
 
 	toneRecord() = default;
 
-	bool isNull(){
-		return singleTone == none && toneDuration == 0;
-	}
+    bool isNull(){
+        return singleTone == none && toneDuration == 0;
+    }
 };
 
 template <uint8_t soundLength>
@@ -99,8 +99,7 @@ class Sound {
     }; 
 };
 
-
-using Sound4 = Sound<10>;
+using Sound4 = Sound<4>;
 using Melody = Sound<64>;
 
 class Soundboard {
@@ -118,7 +117,7 @@ class Soundboard {
 
     static Sound4* currentSound;
     static Melody* currentMelody;
-    static toneRecord* currentRecord;
+    static toneRecord currentRecord;
 
     static const uint8_t soundNum = 6;
     static Sound4 soundList[soundNum];
@@ -139,7 +138,7 @@ class Soundboard {
 
     enum melodies {
         imperialMarch,
-		
+        halucination,
     };
 
     // Initializes soundboard.

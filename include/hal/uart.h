@@ -38,12 +38,16 @@ uint8_t uart_send(uint8_t* data, uint8_t length);
 uint8_t uart_recv(uint8_t* data, uint8_t length);
 
 /**
- * @brief Whether the RX buffer is empty
+ * @brief Returns the number of bytes in rx buffer
  * 
- * @return True if RX buffer is empty, false otherwise
+ * @return Number of received bytes
  */
-bool uart_is_RX_empty();
+uint8_t uart_rx_bytenum();
 
+/**
+ * @brief Flushes RX buffer
+ */
+void uart_flush_rx();
 
 #ifdef __cplusplus
     }

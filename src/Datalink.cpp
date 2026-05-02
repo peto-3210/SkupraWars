@@ -1,15 +1,10 @@
 #include "Datalink.hpp"
 
 bool Datalink::initialized = false;
-bool Datalink::replying = false;
-uint8_t  Datalink::nodeNum = false;
 
 uint8_t Datalink::datalinkPacket[DATALINK_PACKET_LENGTH] = {0};
 
-uint32_t Datalink::packetReceiveTimeUS = 0;
-SoftwareTimer* Datalink::packetReceiveTimer = nullptr;
 const char* Datalink::errorMsg = nullptr;
-uint8_t Datalink::errorData = 0;
 
 //Maxim-DOW CRC-8 precalculated values
 static const uint8_t CRC_8_TABLE[256] = 
@@ -71,125 +66,55 @@ void Datalink::initDatalink(Datalink::baudRate rate){
 				uart_begin(BAUD_RATE_CONSTANT_115200);
 				break;
 		}
-		packetReceiveTimer = SoftwareTimerPool::acquireTimer();
-		packetReceiveTimeUS = (1/rate) * 11 * DATALINK_PACKET_LENGTH * 2;
+
 		initialized = true;
     }
 }
 
-
-/**
- * @brief Sends data through physical interface
- * 
- * @return True if all data were sent, false otherwise
- */
-bool Datalink::sendPacket(Packet& packet){
-	memcpy(datalinkPacket, packet.rawData, PACKET_LENGTH);
+bool Datalink::sendPacket(uint16_t& packet){
+	memcpy(datalinkPacket, &packet, PACKET_LENGTH);
 	calculateCRC(datalinkPacket, false);
 	if (uart_send(datalinkPacket, DATALINK_PACKET_LENGTH) != DATALINK_PACKET_LENGTH){
-		errorMsg = errorMessages[sendBufferFull];
+		setError(sendBufferFull);
 		return false;
 	};
 	return true;
 }
 
-/**
- * @brief Receives packet through physical interface.
- * 
- * @return 0 if no packet was received, 1 if packet was received and is for this participant,
- * 2 if reply for previus packet was received,
- * 3 if packet is for different participant, 
- * 4 if error occurred (errorMsg is set in this case).
- */
-Datalink::recvPacketState Datalink::recvPacket(Packet& packet){
+Datalink::recvPacketState Datalink::recvPacket(uint16_t& packet){
 	//No packet
-	if (uart_is_RX_empty() == true){
+	if (uart_rx_bytenum() < DATALINK_PACKET_LENGTH){
 		return noPacket;
 	}
 
-	//Reciving packet
-	int recvNum = 0;
-	packetReceiveTimer->startTimerUs(packetReceiveTimeUS);
-	while (recvNum < DATALINK_PACKET_LENGTH && packetReceiveTimer->isDone() == false){
-		recvNum += uart_recv(datalinkPacket + recvNum, DATALINK_PACKET_LENGTH - recvNum);
-	}
-
-	//Check for errors
-	if (recvNum != DATALINK_PACKET_LENGTH){
-		errorMsg = errorMessages[notEnoughBytes];
-		return error;
-	}
 	if (calculateCRC(datalinkPacket, true) == false){
-		errorMsg = errorMessages[crcError];
-		return error;
+		setError(crcError);
+		return packetError;
 	}
-	memcpy(packet.rawData, datalinkPacket, PACKET_LENGTH);
+	memcpy(&packet, datalinkPacket, PACKET_LENGTH);
+	uint8_t distance = packet & 0b111;
+	bool broadcast = packet & 1000;
 
 	//Packet is for this participant
-	if (packet.distance == 0){
-
-		//Received reply packet
-		if (packet.reply == true){
-			return replyReceived;
-		}
-
-		//Replying is on
-		else if (replying == true && packet.function != checkTopology){
-			packet.reply = true;
-			if (packet.direction == false){
-				packet.direction = true;
-				packet.distance = nodeNum - 1;
-			}
-			else {
-				packet.direction = false;
-				packet.distance = 0;
-			}
-
-			if (sendPacket(packet) == false){
-				return error;
-			}
-		}
-
+	if (distance == 0){
 		return packetReceived;
 	}
 
 	//Sends packet to next participant
 	else {
-		packet.distance--;
+		packet &= 0b11111000;
+		packet |= (distance - 1);
 		if (sendPacket(packet) == false){
-			return error;
+			return packetError;
+		}
+
+		if (broadcast == true){
+			packet &= 0b11111000;
+			packet |= distance;
+			return packetReceived;
 		}
 		return packetForOtherParticipant;
 	}
-}
-
-/**
- * @brief Flushes RX buffer
-*/
-void Datalink::flushRX(){
-	uint8_t dummy = 0;
-	while (uart_recv(&dummy, 1) > 0);
-}
-
-bool Datalink::initTopology(uint8_t participants, uint8_t myPayload, bool requireReply){
-	nodeNum = participants;
-	replying = requireReply;
-
-	Packet packet(nodeNum - 1, checkTopology, myPayload, false);
-	uint8_t payloads[nodeNum-1] = {0};
-
-	if (Datalink::sendPacket(packet) == false){
-		return false;
-	}
-
-	for (uint8_t i = 0; i < nodeNum - 1; ++i){
-		if (Datalink::recvPacket(packet) == false){
-			return false;
-		}
-		payloads[i] = packet.payload;
-	}
-
-	return false;
 }
 
 

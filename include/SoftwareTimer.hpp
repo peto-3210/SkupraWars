@@ -38,7 +38,6 @@ class SoftwareTimer{
         this->value = value;
     }
 
-
     /**
      * @brief Retrieves current state of timer.
      * 

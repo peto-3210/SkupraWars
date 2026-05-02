@@ -36,13 +36,9 @@ void SoftwareTimerPool::tick(){
     lastTimestamp = currentTimestamp;
 }
 
-void SoftwareTimer::startTimerUs(uint32_t value){
-    this->value = value;
-}
-
-bool SoftwareTimer::isDone(){
-    return value == 0;
-}
-void SoftwareTimer::stop(){
-    value = 0;
+void SoftwareTimerPool::busyWaitUs(uint32_t periodUs){
+    uint32_t startTime = micros();
+    while (micros() - startTime < periodUs){
+        tick();
+    }
 }

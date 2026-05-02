@@ -5,27 +5,27 @@
 #define AoD_Q      (60000 / AoD_BPM)
 #define AoD_E      (AoD_Q / 2)
 
-// Definice polí pro zvuky a melodie
+// Definice polï¿½ pro zvuky a melodie
 Sound4 Soundboard::soundList[soundNum] = {};
 Melody Soundboard::melodyList[melodyNum] = {};
 
-// Railgun: Rychlé vysoké pípnutí (default)
+// Railgun: Rychlï¿½ vysokï¿½ pï¿½pnutï¿½ (default)
 const toneRecord sfx_railgun[] PROGMEM = {
 	{aH, 30},
 	{fH, 40},
 	{c, 20}
 };
 
-// Burst: Tøi krátká pípnutí (staccato)
+// Burst: Tï¿½i krï¿½tkï¿½ pï¿½pnutï¿½ (staccato)
 const toneRecord sfx_burst[] PROGMEM = {
 	{cH, 20},
 	{none, 20},
 	{cH, 20}
 };
 
-// Raketomet: Hluboký, delší zvuk (nabíhající)
+// Raketomet: Hlubokï¿½, delï¿½ï¿½ zvuk (nabï¿½hajï¿½cï¿½)
 const toneRecord sfx_rocket[] PROGMEM = {
-	{gH, 15}, // Záblesk výbuchu
+	{gH, 15}, // Zï¿½blesk vï¿½buchu
 	{c, 80},
 	{dS, 80},
 	{f, 150}

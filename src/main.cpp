@@ -7,7 +7,7 @@
 
 #include "Gamestate.hpp"
 
-// Jednotlivé herní moduly
+// Jednotlivï¿½ hernï¿½ moduly
 #include "Menu.hpp"
 #include "Graphics.hpp"
 #include "Gameplay.hpp"
@@ -16,11 +16,11 @@
 int main(void) {
 	sei();
 
-	// Inicializace portù
+	// Inicializace portï¿½
 	DDRB = 0b00100010;
 	PORTB = 0b00000000;
 	
-	// OPRAVA: Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
+	// OPRAVA: Vï¿½echny piny PD2 aï¿½ PD5 nastavï¿½me jako VSTUPY (0)
 	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
 	// Zapneme Pull-up rezistory pro tyto piny
 	PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
@@ -29,7 +29,7 @@ int main(void) {
 	st7735_init();
 	SoftwareTimerPool::initTimerPool(10);
 	
-	// Øízení stavù
+	// ï¿½ï¿½zenï¿½ stavï¿½
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
 	
@@ -40,7 +40,7 @@ int main(void) {
 		SoftwareTimerPool::tick();
 		Soundboard::play();
 
-		// HLAVNÍ STAVOVÝ AUTOMAT
+		// HLAVNï¿½ STAVOVï¿½ AUTOMAT
 		switch (current_state) {
 			
 			case STATE_MENU: { 
@@ -79,7 +79,7 @@ int main(void) {
 				break;
 			}
 
-			case STATE_ARSENAL: { // Pøidáno, aby kompilátor nenadával
+			case STATE_ARSENAL: { // Pï¿½idï¿½no, aby kompilï¿½tor nenadï¿½val
 				break;
 			}
 		}
