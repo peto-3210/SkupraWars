@@ -204,6 +204,15 @@
     <Compile Include="include\Datalink.hpp">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\Gameplay.hpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\Gamestate.hpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\Graphics.hpp">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="include\hal\hardware_timer.h">
       <SubType>compile</SubType>
     </Compile>
@@ -219,6 +228,9 @@
     <Compile Include="include\hal\uart.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\Menu.hpp">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="include\Messenger.hpp">
       <SubType>compile</SubType>
     </Compile>
@@ -229,6 +241,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\Datalink.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\Gameplay.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\Graphics.cpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\hal\hardware_timer.c">
@@ -244,6 +262,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\Menu.cpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\Messenger.cpp">

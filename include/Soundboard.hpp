@@ -46,7 +46,7 @@ struct toneRecord{
         uint32_t rawData;
     };
 
-    toneRecord() = default;
+	toneRecord() = default;
 
     bool isNull(){
         return singleTone == none && toneDuration == 0;
@@ -54,6 +54,7 @@ struct toneRecord{
 };
 
 template <uint8_t soundLength>
+
 class Sound {
     friend class Soundboard;
 
@@ -98,7 +99,7 @@ class Sound {
     }; 
 };
 
-using Sound4 = Sound<4>;
+using Sound4 = Sound<6>;
 using Melody = Sound<64>;
 
 class Soundboard {
@@ -118,7 +119,7 @@ class Soundboard {
     static Melody* currentMelody;
     static toneRecord currentRecord;
 
-    static const uint8_t soundNum = 4;
+    static const uint8_t soundNum = 6;
     static Sound4 soundList[soundNum];
     static const uint8_t melodyNum = 4;
     static Melody melodyList[melodyNum];
@@ -128,17 +129,19 @@ class Soundboard {
     public:
 
     enum sounds {
-        sample,
+		sfx_railgun = 0,
+		sfx_burst = 1,
+		sfx_rocket = 2,
+		sfx_laser = 3,
+		sample = 4,
     };
 
     enum melodies {
         imperialMarch,
-        halucination,
+        zakazaneUvolneni
     };
 
-    /**
-     * @brief Initializes soundboard.
-     */
+    // Initializes soundboard.
     static void initSoundboard();
 
     /**
@@ -160,24 +163,21 @@ class Soundboard {
         isPlaying = true;
     }
 
+	static bool isSoundPlaying() {
+		return isPlaying; 
+	}
 
-    /**
-     * @brief Pauses playback.
-     */
+    // Pauses playback.
     static void pause(){
         isPlaying = false;
     };
 
-    /**
-     * @brief Resumes playback.
-     */
+    // Resumes playback.
     static void resume(){
         isPlaying = true;
     };
 
-    /**
-     * @brief Plays the current sound or melody, should be called in a loop.
-     */
+	// Plays the current sound or melody, should be called in a loop.
     static void play();
 };
 

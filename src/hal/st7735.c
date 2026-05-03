@@ -17,10 +17,11 @@ void st7735_write_data(uint8_t data) {
 }
 
 void st7735_init(void) {
-    // Nastavení pinů DC (PB1) a RST (PB0) jako výstupy
-    DDRB |= (1 << PB1) | (1 << PB0); 
+    // Nastavení pinů DC (PD0) a RST (PB0) jako výstupy
+	DDRB |= (1 << PB0);
+	DDRD |= (1 << PD0);
     
-    // 1. Hardwarový reset
+    // Hardwarový reset
     ST7735_RST_HIGH();
     _delay_ms(10);
     ST7735_RST_LOW();
@@ -28,24 +29,23 @@ void st7735_init(void) {
     ST7735_RST_HIGH();
     _delay_ms(120);
     
-    // 2. Softwarový reset (Command 0x01)
+    // Softwarový reset (Command 0x01)
     st7735_write_command(0x01);
     _delay_ms(150);
     
-    // 3. Konec režimu spánku (Command 0x11)
+    // Konec režimu spánku (Command 0x11)
     st7735_write_command(0x11);
     _delay_ms(120);
 
-    // 4. Nastavení formátu barev na 16-bit / pixel (Command 0x3A)
+    // Nastavení formátu barev na 16-bit / pixel (Command 0x3A)
     st7735_write_command(0x3A);
     st7735_write_data(0x05); // 0x05 = 16-bit
     
-    // --- NOVÉ: Orientace displeje ---
+    // Orientace displeje 
     st7735_write_command(0x36);
-    st7735_write_data(0xC0); // 0xC0 otočí displej o 180°.
-    // (Zkus případně 0x00, 0x40, nebo 0x80, dokud to nebude sedět na tvůj hardware)
+    st7735_write_data(0xC0); // 0xC0 otočí displej o 180°
     
-    // 5. Zapnutí displeje (Command 0x29)
+    // Zapnutí displeje (Command 0x29)
     st7735_write_command(0x29);
 }
 
@@ -75,6 +75,42 @@ void st7735_fill_screen(uint16_t color) {
     }
     
     ST7735_CS_HIGH();
+}
+
+void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color) {
+	// 1. Ochrana proti vykreslení mimo obrazovku
+	if (x >= 128 || y >= 160) return;
+	if (x + w > 128) w = 128 - x;
+	if (y + h > 160) h = 160 - y;
+
+	// 2. Nastavení okna pro sloupce (X až X + šířka - 1)
+	st7735_write_command(0x2A);
+	st7735_write_data(0x00); st7735_write_data(x);
+	st7735_write_data(0x00); st7735_write_data(x + w - 1);
+	
+	// 3. Nastavení okna pro řádky (Y až Y + výška - 1)
+	st7735_write_command(0x2B);
+	st7735_write_data(0x00); st7735_write_data(y);
+	st7735_write_data(0x00); st7735_write_data(y + h - 1);
+	
+	// 4. Příkaz pro zápis barev
+	st7735_write_command(0x2C);
+	
+	// 5. Rozdělení barvy
+	uint8_t color_high = color >> 8;
+	uint8_t color_low = color & 0xFF;
+	
+	ST7735_DC_DATA();
+	ST7735_CS_LOW();
+	
+	// 6. Rychlé odeslání všech pixelů v daném obdélníku
+	uint16_t total_pixels = w * h;
+	for (uint16_t i = 0; i < total_pixels; i++) {
+		spi_transfer(color_high);
+		spi_transfer(color_low);
+	}
+	
+	ST7735_CS_HIGH();
 }
 
 void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {

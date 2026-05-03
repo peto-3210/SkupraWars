@@ -1,4 +1,5 @@
 #include "Soundboard.hpp"
+#include "SoftwareTimer.hpp"
 
 SoftwareTimer* Soundboard::toneTimer = nullptr;
 bool Soundboard::isPlaying = false;
@@ -8,9 +9,9 @@ Melody* Soundboard::currentMelody = nullptr;
 toneRecord Soundboard::currentRecord = {};
 
 void Soundboard::initSoundboard(){
-    hardware_pwm_init();
-    toneTimer = SoftwareTimerPool::acquireTimer();
-    initPlaylist();
+	hardware_pwm_init();
+	toneTimer = SoftwareTimerPool::acquireTimer();
+	initPlaylist();
 }
 
 void Soundboard::play(){
@@ -20,8 +21,8 @@ void Soundboard::play(){
         currentRecord = {};
     }
 
-    //Playing sound
-    else if (currentSound != nullptr){
+	//Playing sound
+	else if (currentSound != nullptr){
 
         //No tone is playing
         if (currentRecord.isNull()){
@@ -41,8 +42,8 @@ void Soundboard::play(){
         }
     }
 
-    //Playing melody
-    else if (currentMelody != nullptr){
+	//Playing melody
+	else if (currentMelody != nullptr){
 
         //No tone is playing
         if (currentRecord.isNull()){
