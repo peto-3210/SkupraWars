@@ -99,7 +99,7 @@ class Sound {
     }; 
 };
 
-using Sound4 = Sound<4>;
+using Sound4 = Sound<6>;
 using Melody = Sound<64>;
 
 class Soundboard {
@@ -138,7 +138,7 @@ class Soundboard {
 
     enum melodies {
         imperialMarch,
-        halucination,
+        zakazaneUvolneni
     };
 
     // Initializes soundboard.
@@ -163,6 +163,9 @@ class Soundboard {
         isPlaying = true;
     }
 
+	static bool isSoundPlaying() {
+		return isPlaying; 
+	}
 
     // Pauses playback.
     static void pause(){

@@ -179,7 +179,7 @@ bool Messenger::initTopology(uint8_t nodesNumber, uint8_t myId, bool requireRepl
 void Messenger::disableNode(uint8_t nodeId){
     for (uint8_t i = 0; i < nodeNum; ++i){
         if (nodes[i] == nodeId){
-            nodeActive[i] == false;
+            nodeActive[i] = false;
         }
     }
 }
@@ -210,8 +210,4 @@ bool Messenger::sendToNeighbour(Packet& packet, bool direction){
 
     packet.distance = iterator;
     return sendMessage(packet);
-}
-
-bool Messenger::announceMsg(announcePayload announcement, bool direction){
-
 }

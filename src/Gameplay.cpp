@@ -6,6 +6,25 @@
 #include "hal/st7735.h"
 #include <avr/io.h>
 
+// --- Definice HUD regionů a barev ---
+#define TOP_HUD_Y_START 0
+#define TOP_HUD_Y_END   15
+
+#define BOT_SEP_LINE_Y  140 // Červená čára
+#define BOT_HUD_Y_START 141
+
+#define SHIP_Y_TOP      124 // Horní okraj lodě. Kreslí se dolů k 140.
+
+// Definice barev z nákresu
+#define COLOR_GREEN		0x07E0 
+#define COLOR_BLUE		0x001F
+#define COLOR_RED		0xF800 
+#define COLOR_WHITE		0xFFFF 
+#define COLOR_CYAN		0x07FF
+#define COLOR_ORANGE	0xFD20
+#define COLOR_MAGENTA   0xF81F
+#define COLOR_BG        0x0000 // Černé pozadí
+
 #define MAX_LASERS 7
 #define LASER_LENGTH 5
 #define SHIP_LENGTH 16
@@ -32,6 +51,15 @@ struct Projectile {
 	uint32_t spawn_time; // Důležité pro 3sekundový laser
 };
 
+// Globální stav nábojů hráče
+// Indexy odpovídají: 0=RAILGUN, 1=BURST, 2=ROCKET, 3=LASER
+uint8_t player_ammo[4] = {
+	255, // WEP_RAILGUN: Hodnota je fuk, HUD kreslí nekonečno a v logice ho nebudeme odečítat
+	15,  // WEP_BURST: Startovní počet nábojů
+	5,   // WEP_ROCKET: Startovní počet raket
+	10   // WEP_LASER: Startovní počet laserů
+};
+
 // Pomocné proměnné pro Burst (Dávkovaný railgun)
 uint8_t burst_shots_left = 0;
 SoftwareTimer* burstTimer = nullptr; 
@@ -54,24 +82,132 @@ static SoftwareTimer* projectileTimer = nullptr;
 static SoftwareTimer* fireCooldownTimer = nullptr;
 static bool isRapidFireActive = false; // Zatím false, později se bude měnit po sebrání power-upu
 
-void gameplay_init(void) {
-    btnTimer = SoftwareTimerPool::acquireTimer();
-    projectileTimer = SoftwareTimerPool::acquireTimer();
-	burstTimer = SoftwareTimerPool::acquireTimer();
-	burstTimer->startTimerUs(100);
-	fireCooldownTimer = SoftwareTimerPool::acquireTimer();
-	fireCooldownTimer->startTimerUs(0);
-    
-    last_A = (PIND & (1 << PD2)) >> PD2;
-    x = DISPLAY_WIDTH/2; // Reset pozice
-    
-    for (int i = 0; i < MAX_LASERS; i++) {
-        player_lasers[i].active = false;
-        enemy_lasers[i].active = false;
-    }
-    
-    st7735_fill_screen(0xFFFF);
-    draw_ship(x, SHIP_Y, 0x001F);
+// --- Funkce pro vykreslení HUD ---
+
+// Vykreslí statické prvky Horního HUDu (nepřekresluje se v loopu)
+void gameplay_draw_top_hud_static(void) {
+	// 1. Zelená dělící čára (Y=15)
+	st7735_fill_rect(0, TOP_HUD_Y_END, 128, 1, COLOR_GREEN);
+	
+	// 2. Levá strana (Zelené srdíčko)
+	draw_heart8x8(5, TOP_HUD_Y_START + 4, COLOR_GREEN, COLOR_BG);
+	
+	// 3. Pravá strana (Modré srdíčko)
+	draw_heart8x8(115, TOP_HUD_Y_START + 4, COLOR_BLUE, COLOR_BG);
+	
+	// 4. Středová tečkovaná čára 
+	// Protože st7735 nemá dotted_line, musíme to udělat po pixelu
+	for (uint8_t y = 0; y <= TOP_HUD_Y_END; y += 2) {
+		st7735_draw_pixel(DISPLAY_WIDTH/2, y, COLOR_MAGENTA);  
+	}
+}
+
+// Vykreslí dynamické prvky Horního HUDu (životy)
+void gameplay_draw_top_hud_dynamic(uint8_t p1_health, uint8_t p2_health) {
+	char h1_s[3]; // Buffer pro 2 číslice + terminator
+	char h2_s[3];
+	
+	// Formátování životů (H1: "99", H2: "99")
+	h1_s[0] = (p1_health / 10) + '0';
+	h1_s[1] = (p1_health % 10) + '0';
+	h1_s[2] = '\0';
+	
+	h2_s[0] = (p2_health / 10) + '0';
+	h2_s[1] = (p2_health % 10) + '0';
+	h2_s[2] = '\0';
+
+	// Kreslení textu - barvy podle týmu
+	// (Předpokládám, že draw_string umí smazat pozadí s bg_color)
+	draw_string(18, TOP_HUD_Y_START + 4, h1_s, COLOR_GREEN, COLOR_BG);
+	draw_string(100, TOP_HUD_Y_START + 4, h2_s, COLOR_BLUE, COLOR_BG);
+}
+
+void draw_weapon_selection_box(WeaponType wep, uint16_t color) {
+	uint8_t slot_x = 43 + static_cast<int>(wep) * 21;
+	uint8_t y = BOT_HUD_Y_START + 1;
+	
+	// Horní linka
+	st7735_fill_rect(slot_x, y, 20, 1, color);
+	// Spodní linka
+	st7735_fill_rect(slot_x, y + 17, 20, 1, color);
+	// Levá linka
+	st7735_fill_rect(slot_x, y, 1, 18, color);
+	// Pravá linka
+	st7735_fill_rect(slot_x + 19, y, 1, 18, color);
+}
+
+// Vykreslí spodní HUD (statické prvky + zbraně)
+void gameplay_draw_bottom_hud(uint8_t your_health, WeaponType active_weapon, uint8_t ammo_counts[]) {
+	// 1. Červená dělící čára (Y=140)
+	st7735_fill_rect(0, BOT_SEP_LINE_Y, 128, 1, COLOR_RED);
+	
+	// 2. Levá sekce: Červené srdce a životy
+	draw_heart8x8(5, BOT_HUD_Y_START + 6, COLOR_RED, COLOR_BG);
+	char yh_s[3];
+	yh_s[0] = (your_health / 10) + '0';
+	yh_s[1] = (your_health % 10) + '0';
+	yh_s[2] = '\0';
+	draw_string(18, BOT_HUD_Y_START + 6, yh_s, COLOR_RED, COLOR_BG);
+
+	// 3. Tlustý bílý dělící sloupec (začíná např. na X=40)
+	st7735_fill_rect(36, BOT_HUD_Y_START, 2, 160 - BOT_SEP_LINE_Y, COLOR_WHITE); // Bílý, ať je vidět na černém pozadí
+
+	// 4. Zbraně sekce (X=43 až 127)
+	// Máme 4 zbraně. W=128-43=85px. 4 sloty po ~21px.
+
+	for (int w = 0; w < 4; w++) {
+		uint8_t slot_x = 43 + w * 21;
+		
+		// Zvýraznění aktivní zbraně pomocí naší nové funkce
+		uint16_t slot_border_color = (w == static_cast<int>(active_weapon)) ? COLOR_WHITE : COLOR_BG;
+		draw_weapon_selection_box(static_cast<WeaponType>(w), slot_border_color);
+		
+		// --- Ikonky Projektilů ---
+		if (w == WEP_RAILGUN) {
+			// "Rail gun" Text Labels (velmi malé fonty nemáme, skipujeme pro teď, kreslíme ikonu)
+			st7735_fill_rect(slot_x + 9, BOT_HUD_Y_START + 3, 2, 8, COLOR_BLUE);
+			// Ammo nekonečno, dáme "--" (dvě horizontální čárky 4x2 pixely)
+			st7735_fill_rect(slot_x + 4, BOT_HUD_Y_START + 13, 4, 2, COLOR_WHITE);
+			st7735_fill_rect(slot_x + 10, BOT_HUD_Y_START + 13, 4, 2, COLOR_WHITE);
+		}
+		else if (w == WEP_BURST) {
+			// Tři čárky ( Burst)
+			st7735_fill_rect(slot_x + 5, BOT_HUD_Y_START + 3, 2, 8, COLOR_BLUE);
+			st7735_fill_rect(slot_x + 9, BOT_HUD_Y_START + 3, 2, 8, COLOR_BLUE);
+			st7735_fill_rect(slot_x + 13, BOT_HUD_Y_START + 3, 2, 8, COLOR_BLUE);
+			
+			// Ammo počet
+			char ammo_s[3];
+			ammo_s[0] = (ammo_counts[w] / 10) + '0';
+			ammo_s[1] = (ammo_counts[w] % 10) + '0';
+			ammo_s[2] = '\0';
+			draw_string(slot_x + 5, BOT_HUD_Y_START + 11, ammo_s, COLOR_WHITE, COLOR_BG);
+		}
+		else if (w == WEP_ROCKET) {
+			// Tvar rakety 3x8 dolů
+			st7735_fill_rect(slot_x + 9, BOT_HUD_Y_START + 3, 2, 8, COLOR_GREEN);   // Zelené tělo
+			st7735_fill_rect(slot_x + 7, BOT_HUD_Y_START + 3, 2, 4, COLOR_ORANGE);  // Oranžová křídla
+			st7735_fill_rect(slot_x + 11, BOT_HUD_Y_START + 3, 2, 4, COLOR_ORANGE); // Oranžová křídla
+			
+			// Ammo počet
+			char ammo_s[3];
+			ammo_s[0] = (ammo_counts[w] / 10) + '0';
+			ammo_s[1] = (ammo_counts[w] % 10) + '0';
+			ammo_s[2] = '\0';
+			draw_string(slot_x + 5, BOT_HUD_Y_START + 11, ammo_s, COLOR_WHITE, COLOR_BG);
+		}
+		else if (w == WEP_LASER) {
+			// Laser paprsek (široký, Cyan)
+			st7735_fill_rect(slot_x + 8, BOT_HUD_Y_START + 3, 4, 8, COLOR_CYAN);
+			
+			// Ammo počet
+			char ammo_s[3];
+			ammo_s[0] = (ammo_counts[w] / 10) + '0';
+			ammo_s[1] = (ammo_counts[w] % 10) + '0';
+			ammo_s[2] = '\0';
+			draw_string(slot_x + 5, BOT_HUD_Y_START + 11, ammo_s, COLOR_WHITE, COLOR_BG);
+		}
+	}
 }
 
 // Funkce přijme referenci na JAKOUKOLIV střelu a informaci, čí ta střela je
@@ -91,12 +227,12 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		// Smažeme ocas střely, pokud je ještě na obrazovce
 		bool tail_on_screen = is_enemy ? (tail_y > 16) : (tail_y < SHIP_Y);
 		if (tail_on_screen) {
-			st7735_draw_pixel(p.x, tail_y, 0xFFFF);
+			st7735_draw_pixel(p.x, tail_y, COLOR_BG);
 		}
 		
-		// Barvy podle toho, kdo střílí (Hráč: modrá stopa/světle modrá špička | Nepřítel: červená stopa/žlutá špička) 
-		uint16_t trace_color = is_enemy ? 0xF800 : 0x001F;
-		uint16_t tip_color   = is_enemy ? 0xFFE0 : 0x07FF; 
+		// Barvy podle toho, kdo střílí (Hráč: modrá stopa/světle modrá špička | Nepřítel: červená stopa/žlutá špička)
+		uint16_t trace_color = is_enemy ? COLOR_RED : COLOR_BLUE;
+		uint16_t tip_color   = is_enemy ? COLOR_ORANGE : COLOR_CYAN;
 
 		// Stará špička ztmavne
 		st7735_draw_pixel(p.x, p.y, trace_color);
@@ -115,7 +251,7 @@ void process_projectile(Projectile& p, bool is_enemy) {
 			// Smazání celého laseru z obrazovky
 			for(uint8_t j = 0; j <= LASER_LENGTH; j++) {
 				int erase_y = is_enemy ? (p.y - j) : (p.y + j);
-				st7735_draw_pixel(p.x, erase_y, 0xFFFF);
+				st7735_draw_pixel(p.x, erase_y, COLOR_BG);
 			}
 			
 			// Odeslání přes UART (odesíláme logicky jen vlastní střely)
@@ -130,14 +266,14 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		
 		// Smazání stopy po raketě (spodní/horní řádek, který po posunu zůstane)
 		int erase_y = is_enemy ? (p.y - 1) : (p.y + 8);
-		st7735_fill_rect(p.x, erase_y, 3, 1, 0xFFFF);
+		st7735_fill_rect(p.x, erase_y, 3, 1, COLOR_BG);
 
 		// Posun
 		p.y += direction;
 
 		// Rozlišení barev a umístění křidélek (aby raketa letěla špičkou dopředu)
-		uint16_t body_color = is_enemy ? 0xF800 : 0x001F; // Hráč modrá, nepřítel červená 
-		uint16_t wing_color = is_enemy ? 0x07FF : 0x07E0; // Hráč zelená, nepřítel světle modrá
+		uint16_t body_color = is_enemy ? COLOR_RED : COLOR_GREEN; // Hráč zelená, nepřítel červená
+		uint16_t wing_color = is_enemy ? COLOR_BLUE : COLOR_ORANGE; // Hráč oranžová, nepřítel modrá
 		int wing_y_offset   = is_enemy ? 0 : 4;           // Křidélka vzadu
 
 		// Vykreslení rakety na nové pozici (x, y, šířka, výška)
@@ -150,7 +286,7 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		if (out_of_bounds) {
 			p.active = false;
 			// Smazání celé 3x8 rakety
-			st7735_fill_rect(p.x, p.y, 3, 9, 0xFFFF);
+			st7735_fill_rect(p.x, p.y, 3, 9, COLOR_BG);
 			
 			if (!is_enemy) {
 				// uart_send_projectile(p.x, p.type);
@@ -164,13 +300,45 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		if (micros() - p.spawn_time > 3000000UL) {
 			p.active = false;
 			// Vypršel čas -> smažeme paprsek. Vždy je od y=16 až k lodi (SHIP_Y).
-			st7735_fill_rect(p.x, 16, 2, SHIP_Y - 16, 0xFFFF);
+			st7735_fill_rect(p.x, 16, 2, SHIP_Y - 16, COLOR_BG);
 			} else {
 			// Hráčův paprsek bude modrozelený, nepřátelský třeba čistě červený
-			uint16_t laser_color = is_enemy ? 0xF800 : 0x07FF;
+			uint16_t laser_color = is_enemy ? COLOR_RED : COLOR_CYAN;
 			st7735_fill_rect(p.x, 16, 2, SHIP_Y - 16, laser_color);
 		}
 	}
+}
+
+void gameplay_init(void) {
+    btnTimer = SoftwareTimerPool::acquireTimer();
+    projectileTimer = SoftwareTimerPool::acquireTimer();
+	burstTimer = SoftwareTimerPool::acquireTimer();
+	burstTimer->startTimerUs(100);
+	fireCooldownTimer = SoftwareTimerPool::acquireTimer();
+	fireCooldownTimer->startTimerUs(0);
+    
+    last_A = (PIND & (1 << PD2)) >> PD2;
+    x = DISPLAY_WIDTH/2; // Reset pozice
+    
+    for (int i = 0; i < MAX_LASERS; i++) {
+        player_lasers[i].active = false;
+        enemy_lasers[i].active = false;
+    }
+    
+    // 1. Vyplníme celou obrazovku černě (vesmír)
+    st7735_fill_screen(COLOR_BG);
+
+    // 2. Vykreslíme statické lišty a ikonky
+    gameplay_draw_top_hud_static();
+    
+    // 3. Vykreslíme dynamicé prvky se startovními hodnotami
+    gameplay_draw_top_hud_dynamic(99, 99); // P1_H, P2_H
+    
+    // Použijeme startovní zbraň a ammo (vytvoř si pole s ammo např. na začátku gameplay.cpp)
+    gameplay_draw_bottom_hud(99, WEP_RAILGUN, player_ammo); // your_hp, wep, ammo_array
+
+    // 4. Kreslíme loď na nové pozici SHIP_Y_TOP=124 (kreslí se dolů k 140)
+    st7735_fill_rect(x, SHIP_Y_TOP, SHIP_LENGTH, SHIP_LENGTH, COLOR_BLUE);
 }
 
 GameState gameplay_tick(void) {
@@ -179,7 +347,17 @@ GameState gameplay_tick(void) {
 	bool current_pd4_state = (PIND & (1 << PD4));
 
 	if (!current_pd4_state && last_pd4_state) { // Detekce sestupné hrany (stisk)
-		current_weapon = static_cast<WeaponType>((current_weapon + 1) % 4); 
+		// 1. Zapamatujeme si starou zbraň
+		WeaponType old_weapon = current_weapon;
+		
+		// 2. Přepneme na další
+		current_weapon = static_cast<WeaponType>((current_weapon + 1) % 4);
+		
+		// 3. Smažeme rámeček kolem staré zbraně
+		draw_weapon_selection_box(old_weapon, COLOR_BG);
+		
+		// 4. Vykreslíme rámeček kolem nové zbraně
+		draw_weapon_selection_box(current_weapon, COLOR_WHITE);
 	}
 	last_pd4_state = current_pd4_state;
 	
@@ -320,36 +498,24 @@ GameState gameplay_tick(void) {
 
 		    // Pokud jsme se pohnuli, překreslíme
 		    if (x != old_x) {
-			    // 1. Uklidíme "odpad"
+			    // 1. Uklidíme "odpad" pomocí rychlého fill_rect!
 			    
-			    // A) Došlo k teleportu přes celou obrazovku? (Skok z 0 na 112 nebo naopak)
+			    // A) Teleport (Skok přes celou obrazovku)
 			    if ((old_x < 3 && x > 100) || (old_x > 100 && x < 3)) {
-				    // Musíme smazat celou starou loď (16x16)
-				    for (int dx = 0; dx < SHIP_LENGTH; dx++) {
-					    for (int dy = 0; dy < SHIP_LENGTH; dy++) {
-						    st7735_draw_pixel(old_x + dx, SHIP_Y + dy, 0xFFFF);
-					    }
-				    }
+				    // Smažeme celý starý prostor 16x16
+				    st7735_fill_rect(old_x, SHIP_Y, SHIP_LENGTH, SHIP_LENGTH, COLOR_BG);
 			    }
-			    // B) Normální posun doleva (mažeme pravý okraj)
+			    // B) Normální posun doleva (mažeme 3 pixely široký pruh vpravo)
 			    else if (x < old_x) {
-				    for (int i = 0; i < SHIP_LENGTH; i++) {
-					    st7735_draw_pixel(old_x + 13, SHIP_Y + i, 0xFFFF);
-					    st7735_draw_pixel(old_x + 14, SHIP_Y + i, 0xFFFF);
-					    st7735_draw_pixel(old_x + 15, SHIP_Y + i, 0xFFFF);
-				    }
+				    st7735_fill_rect(old_x + 13, SHIP_Y, 3, SHIP_LENGTH, COLOR_BG);
 			    }
-			    // C) Normální posun doprava (mažeme levý okraj)
+			    // C) Normální posun doprava (mažeme 3 pixely široký pruh vlevo)
 			    else {
-				    for (int i = 0; i < SHIP_LENGTH; i++) {
-					    st7735_draw_pixel(old_x, SHIP_Y + i, 0xFFFF);
-					    st7735_draw_pixel(old_x + 1, SHIP_Y + i, 0xFFFF);
-					    st7735_draw_pixel(old_x + 2, SHIP_Y + i, 0xFFFF);
-				    }
+				    st7735_fill_rect(old_x, SHIP_Y, 3, SHIP_LENGTH, COLOR_BG);
 			    }
 			    
-			    // 2. Vykreslíme loď na nové pozici
-			    draw_ship(x, SHIP_Y, 0x001F);
+			    // 2. Vykreslíme loď na nové pozici 
+			    draw_ship(x, SHIP_Y, COLOR_BLUE);
 		    }
 	    }
 	    last_A = current_A;
@@ -357,6 +523,39 @@ GameState gameplay_tick(void) {
 	
 	return STATE_GAMEPLAY;
 }
+
+void try_shoot(WeaponType wep) {
+	// 1. Kontrola, zda máme náboje (nebo zda je to Railgun s nekonečnem)
+	if (wep == WEP_RAILGUN || player_ammo[wep] > 0) {
+		
+		// ... Zde zavolat logiku pro vytvoření samotné střely ...
+		// spawn_projectile(wep, x, y);
+
+		// 2. Odečtení náboje (pokud to není Railgun)
+		if (wep != WEP_RAILGUN) {
+			player_ammo[wep]--;
+		}
+		
+		// 3. Překreslení HUDu (aby se číslo hned zaktualizovalo)
+		// Pozor: Překreslovat celý HUD při každém výstřelu může být pomalé.
+		// Ideální je později napsat funkci, která přepíše jen to jedno konkrétní číslo na obrazovce.
+		} else {
+		// Hráč nemá náboje -> můžeš přehrát zvuk naprázdno "cvak"
+	}
+}
+
+void add_ammo(WeaponType wep, uint8_t amount) {
+	// Přičteme náboje
+	player_ammo[wep] += amount;
+	
+	// Omezíme na max 99 kvůli vykreslování na displeji
+	if (player_ammo[wep] > 99) {
+		player_ammo[wep] = 99;
+	}
+}
+
+// Použití ve hře:
+// add_ammo(WEP_ROCKET, 5);
 
 void gameplay_spawn_enemy_laser(uint8_t received_x) {
 	uint8_t mirrored_x = 127 - received_x;

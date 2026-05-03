@@ -13,14 +13,17 @@
 #include "Gameplay.hpp"
 #include "Soundboard.hpp"
 
+#define COLOR_BG        0x0000 // Černé pozadí
+
+
 int main(void) {
 	sei();
 
-	// Inicializace port�
+	// Inicializace portů
 	DDRB = 0b00100010;
 	PORTB = 0b00000000;
 	
-	// OPRAVA: V�echny piny PD2 a� PD5 nastav�me jako VSTUPY (0)
+	// OPRAVA: Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
 	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
 	// Zapneme Pull-up rezistory pro tyto piny
 	PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
@@ -29,7 +32,7 @@ int main(void) {
 	st7735_init();
 	SoftwareTimerPool::initTimerPool(10);
 	
-	// ��zen� stav�
+	// ��zení stavů
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
 	
@@ -73,7 +76,7 @@ int main(void) {
 
 			case STATE_SCORE: { 
 				if (state_just_changed) {
-					st7735_fill_screen(0x0000);
+					st7735_fill_screen(COLOR_BG);
 					state_just_changed = false;
 				}
 				break;
