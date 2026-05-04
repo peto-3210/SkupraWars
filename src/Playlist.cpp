@@ -45,10 +45,18 @@ const toneRecord sfx_laserToneRecord[] PROGMEM = {
 	{e, 60}
 };
 
-const toneRecord sampleToneRecord[] PROGMEM = {
-	{a, 1000},
-	{gH, 1000},
-	{aH, 1000}
+// Prázdný zásobník
+const toneRecord sfx_noAmmoToneRecord[] PROGMEM = {
+	{cH, 15},   // Velmi krátký vysoký "ťuk"
+	{g, 15},    // Rychlý dozvuk mechaniky
+	{none, 10}  // Ukončení
+};
+
+const toneRecord sfx_powerup_useToneRecord[] PROGMEM = {
+	{c, 80},    // Start
+	{e, 80},    // Střed
+	{g, 80},    // Vyšší tón
+	{cH, 150}   // Finální vysoké C (pocit "jsem silnější")
 };
 
 const toneRecord iMarchToneRecord[] PROGMEM = {
@@ -111,7 +119,8 @@ void Soundboard::initPlaylist(){
 	soundList[sfx_burst].setToneBuffer(sfx_burstToneRecord, sizeof(sfx_burstToneRecord) / sizeof(toneRecord));
 	soundList[sfx_rocket].setToneBuffer(sfx_rocketToneRecord, sizeof(sfx_rocketToneRecord) / sizeof(toneRecord));
 	soundList[sfx_laser].setToneBuffer(sfx_laserToneRecord, sizeof(sfx_laserToneRecord) / sizeof(toneRecord));
-	soundList[sample].setToneBuffer(sampleToneRecord, sizeof(sampleToneRecord) / sizeof(toneRecord));
+	soundList[sfx_noAmmo].setToneBuffer(sfx_noAmmoToneRecord, sizeof(sfx_noAmmoToneRecord) / sizeof(toneRecord));
+	soundList[sfx_powerup_use].setToneBuffer(sfx_powerup_useToneRecord, sizeof(sfx_powerup_useToneRecord) / sizeof(toneRecord));
 	melodyList[imperialMarch].setToneBuffer(iMarchToneRecord, sizeof(iMarchToneRecord) / sizeof(toneRecord));
 	melodyList[zakazaneUvolneni].setToneBuffer(zakazaneUvolneniToneRecord, sizeof(zakazaneUvolneniToneRecord) / sizeof(toneRecord));
 }

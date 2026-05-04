@@ -1,7 +1,7 @@
 #ifndef SPI_H
 #define SPI_H
 
-#include "libraries.h" // Obsahuje <avr/io.h> a další věci z vašeho projektu
+#include "libraries.h" // Obsahuje <avr/io.h> a další věci z projektu
 
 #ifdef __cplusplus
     extern "C" {

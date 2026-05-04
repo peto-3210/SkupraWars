@@ -99,7 +99,7 @@ class Sound {
     }; 
 };
 
-using Sound4 = Sound<6>;
+using Sound4 = Sound<8>;
 using Melody = Sound<64>;
 
 class Soundboard {
@@ -119,7 +119,7 @@ class Soundboard {
     static Melody* currentMelody;
     static toneRecord currentRecord;
 
-    static const uint8_t soundNum = 6;
+    static const uint8_t soundNum = 8;
     static Sound4 soundList[soundNum];
     static const uint8_t melodyNum = 4;
     static Melody melodyList[melodyNum];
@@ -133,7 +133,8 @@ class Soundboard {
 		sfx_burst = 1,
 		sfx_rocket = 2,
 		sfx_laser = 3,
-		sample = 4,
+		sfx_noAmmo = 4,
+		sfx_powerup_use = 5
     };
 
     enum melodies {

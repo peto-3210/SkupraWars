@@ -2,6 +2,14 @@
 #include "hal/st7735.h"
 #include <avr/pgmspace.h>
 
+// Definice barev
+#define COLOR_GREEN		0x07E0
+#define COLOR_BLUE		0x001F
+#define COLOR_RED		0xF800
+#define COLOR_WHITE		0xFFFF
+#define COLOR_CYAN		0x07FF
+#define COLOR_ORANGE	0xFD20
+#define COLOR_MAGENTA   0xF81F
 #define COLOR_BG        0x0000 // Černé pozadí
 
 // Klasický 5x7 font (Znaky od ASCII 32 ' ' do 126 '~')
@@ -34,7 +42,7 @@ const uint8_t font5x7[] PROGMEM = {
 
 // Srdíčko 8x8 pixelů (1 bit na pixel = 8 bajtů)
 const uint8_t heart8x8_bitmap[] PROGMEM = {
-	0b01100110, // ** **
+	0b01100110, //  **  **
 	0b11111111, // ********
 	0b11111111, // ********
 	0b11111111, // ********
@@ -44,6 +52,7 @@ const uint8_t heart8x8_bitmap[] PROGMEM = {
 	0b00000000  // (padding)
 };
 
+/************************* draw_bitmap_PROGMEM *************************/
 /**
  * @brief Vykreslí jednobarevnou bitmapu z paměti PROGMEM
  * * @param x X souřadnice levého horního rohu
@@ -79,11 +88,13 @@ void draw_bitmap_PROGMEM(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const uint8
     }
 }
 
+/************************* draw_heart8x8 *************************/
 // Zkratka pro kreslení srdíčka
 void draw_heart8x8(uint8_t x, uint8_t y, uint16_t color, uint16_t bg_color) {
     draw_bitmap_PROGMEM(x, y, 8, 8, heart8x8_bitmap, color, bg_color);
 }
 
+/************************* draw_char *************************/
 // Funkce, která nakreslí JEDEN znak podle naší ASCII tabulky nahoře
 void draw_char(int x, int y, char c, uint16_t color, uint16_t bg_color) {
 	if (c < 32 || c > 126) return; // Znaky mimo tabulku ignorujeme
@@ -101,6 +112,7 @@ void draw_char(int x, int y, char c, uint16_t color, uint16_t bg_color) {
 	}
 }
 
+/************************* draw_string *************************/
 // Funkce, která projde celý text a nakreslí ho písmenko po písmenku
 void draw_string(int x, int y, const char *str, uint16_t color, uint16_t bg_color) {
 	while (*str) {
@@ -116,6 +128,8 @@ const uint16_t spaceship_mask[16] PROGMEM = {
     0x7E7E, 0x6FF6, 0xEFF7, 0x7BDE, 0x33CC, 0x03C0, 0x0180, 0x0000
 };
 
+/************************* draw_ship *************************/
+// Funkce pro vykreslení lodě
 void draw_ship(int x, int y, uint16_t color) {
     for (int i = 0; i < 16; i++) {
         uint16_t row_data = pgm_read_word(&spaceship_mask[i]);
@@ -128,3 +142,51 @@ void draw_ship(int x, int y, uint16_t color) {
         }
     }
 }
+
+// RAPID FIRE - POWER UP
+const uint8_t powerup_rapid_bitmap[] PROGMEM = {
+	0b00111100, //   ****
+	0b01000010, //  *    *
+	0b10010001, // *  *   *
+	0b10010001, // *  *   *
+	0b10011001, // *  **  *
+	0b10000001, // *      *
+	0b01000010, //  *    *
+	0b00111100  //   ****
+};
+
+// SHIELD - POWER UP
+const uint8_t powerup_shield_bitmap[] PROGMEM = {
+	0b01111110, //  ****** 
+	0b11110001, // ****   *
+	0b11110001, // ****   *
+	0b11110001, // ****   *
+	0b11110001, // ****   *
+	0b01110010, //  ***  * 
+	0b00111100, //   **** 
+	0b00011000  //    **
+};
+
+// SENTRY GUN - POWER UP
+const uint8_t powerup_sentry_bitmap[] PROGMEM = {
+	0b00100000, //   *
+	0b01111100, //  ***** 
+	0b01100111, //  **  ***
+	0b01111100, //  ***** 
+	0b00010000, //    * 
+	0b00111000, //   *** 
+	0b01010100, //  * * * 
+	0b10010010  // *  *  * 
+};
+
+// SENTRY GUN - OBJECT
+const uint8_t sentryGun_bitmap[] PROGMEM = {
+	0b00010000, //    *
+	0b01111100, //  *****
+	0b11101110, // *** ***
+	0b01101100, //  ** **
+	0b00111000, //   ***
+	0b00111000, //   ***
+	0b01010100, //  * * *
+	0b10010010  // *  *  *
+};

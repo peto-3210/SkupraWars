@@ -5,14 +5,21 @@
 #include "hal/st7735.h"
 #include "SoftwareTimer.hpp"
 
-#include "Gamestate.hpp"
-
 // Jednotliv� hern� moduly
 #include "Menu.hpp"
 #include "Graphics.hpp"
 #include "Gameplay.hpp"
+#include "Gamestate.hpp"
 #include "Soundboard.hpp"
 
+// Definice barev
+#define COLOR_GREEN		0x07E0
+#define COLOR_BLUE		0x001F
+#define COLOR_RED		0xF800
+#define COLOR_WHITE		0xFFFF
+#define COLOR_CYAN		0x07FF
+#define COLOR_ORANGE	0xFD20
+#define COLOR_MAGENTA   0xF81F
 #define COLOR_BG        0x0000 // Černé pozadí
 
 
