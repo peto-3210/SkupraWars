@@ -11,8 +11,8 @@
 #define ST7735_CS_LOW()  PORTB &= ~(1 << PB2)
 #define ST7735_CS_HIGH() PORTB |=  (1 << PB2)
 
-#define ST7735_DC_CMD()  PORTD &= ~(1 << PD0) // Režim příkazů
-#define ST7735_DC_DATA() PORTD |=  (1 << PD0) // Režim dat
+#define ST7735_DC_CMD()  PORTD &= ~(1 << PD7) // Režim příkazů
+#define ST7735_DC_DATA() PORTD |=  (1 << PD7) // Režim dat
 
 #define ST7735_RST_LOW()  PORTB &= ~(1 << PB0)
 #define ST7735_RST_HIGH() PORTB |=  (1 << PB0)

@@ -1,6 +1,7 @@
 #include "Graphics/Graphics.hpp"
 #include "Gameplay.hpp"
 #include "hal/st7735.h"
+#include <stdio.h> 
 #include <avr/pgmspace.h>
 
 // Definice barev
@@ -253,7 +254,7 @@ void gameplay_draw_bottom_hud(uint8_t your_health, WeaponType active_weapon, uin
 	yh_s[2] = '\0';
 	draw_string(18, BOT_HUD_Y_START + 6, yh_s, COLOR_RED, COLOR_BG);
 
-	// 3. Tlustý bílý dělící sloupec (začíná např. na X=40)
+	// 3. Tlustý bílý dělící sloupec (začíná např. na X=36)
 	st7735_fill_rect(36, BOT_HUD_Y_START, 2, 160 - BOT_SEP_LINE_Y, COLOR_WHITE); // Bílý, ať je vidět na černém pozadí
 
 	// 4. Zbraně sekce (X=43 až 127)
@@ -386,4 +387,16 @@ const uint8_t sentryGun_bitmap[] PROGMEM = {
 	0b00111000, //   ***
 	0b01010100, //  * * *
 	0b10010010  // *  *  *
+};
+
+// ENEMY GOT HIT EMOTE
+const uint8_t enemy_got_hit_emote_bitmap[] PROGMEM = {
+	0b10000001, // *      * 
+	0b01000010, //  *    *
+	0b00100100, //   *  *
+	0b11111111, // ********
+	0b00100100, //   *  *      
+	0b01000010, //  *    *
+	0b10000001, // *      *
+	0b00000000  //
 };

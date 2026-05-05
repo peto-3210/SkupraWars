@@ -67,7 +67,7 @@ class SoftwareTimer{
 class SoftwareTimerPool{
 
     public:
-    static const uint8_t MAX_TIMER_NUM = 16;
+    static const uint8_t MAX_TIMER_NUM = 32;
 
     private:
     static SoftwareTimer timerList[MAX_TIMER_NUM];

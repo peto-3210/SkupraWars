@@ -29,6 +29,7 @@ const char* MENU_ITEMS[NUM_ITEMS] = {
 static uint8_t selected_item = 0; // Která položka je právě vybraná
 static uint8_t last_enc_A;        // Pro čtení enkodéru
 
+
 static MenuButtonState menu_btn_state = MENU_BTN_IDLE;
 static SoftwareTimer* menuBtnTimer;
 

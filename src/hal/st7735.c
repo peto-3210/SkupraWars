@@ -19,7 +19,7 @@ void st7735_write_data(uint8_t data) {
 void st7735_init(void) {
     // Nastavení pinů DC (PD0) a RST (PB0) jako výstupy
 	DDRB |= (1 << PB0);
-	DDRD |= (1 << PD0);
+	DDRD |= (1 << PD7);
     
     // Hardwarový reset
     ST7735_RST_HIGH();

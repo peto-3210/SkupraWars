@@ -25,10 +25,6 @@
 
 int main(void) {
 	sei();
-
-	// Inicializace portů
-	DDRB = 0b00100010;
-	PORTB = 0b00000000;
 	
 	// Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
 	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
