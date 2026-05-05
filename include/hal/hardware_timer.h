@@ -9,6 +9,8 @@ This library serves as a hardware timer interface.
 It initializes hardware timer and provides exact timestamps when requested.
 */
 
+#define PWM_PIN PB1
+
 /**
  * @brief Initializes hardware-based timer
  * 
@@ -29,7 +31,7 @@ void hardware_pwm_init();
  * 
  * @param freq Desired frequency
  */
-void hardware_pwm_set(uint32_t freq);
+void hardware_pwm_set(uint16_t freq);
 
 /**
  * @brief Stops pwm timer

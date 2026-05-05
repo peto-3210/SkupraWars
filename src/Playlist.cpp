@@ -1,5 +1,4 @@
 #include "Soundboard.hpp"
-#include <avr/pgmspace.h>
 
 #define AoD_BPM    160
 #define AoD_Q      (60000 / AoD_BPM)

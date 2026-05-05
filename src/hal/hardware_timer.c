@@ -20,19 +20,19 @@ void hardware_timer_init(uint8_t period){
 
 void hardware_pwm_init(){
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-        DDRB |= 0b00000010; //Enables OC1A pin
+        DDRB |= PWM_PIN; //Enables OC1A pin
         TCNT1 = 0;
         OCR1A = 0;
         TIMSK1 = 0;
     }
 }
 
-void hardware_pwm_set(uint32_t freq){
-    uint32_t ocr = (16000000UL / (256UL * freq * 2)) - 1;
+void hardware_pwm_set(uint16_t freq){
+    uint16_t ocr = (16000000UL / (256UL * freq * 2)) - 1;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
         TCCR1B = 0b00001000;   // Stop clock, keep CTC mode
         TCNT1  = 0;
-        OCR1A  = ocr & 0xffff;
+        OCR1A  = ocr;
 
         //TCCR1A = 0b10000000;   // COM1A = 10 (clear on match) temporarily
         //TCCR1C = (1 << FOC1A); // Force compare - drive OC1A LOW, sets flip-flop to 0

@@ -25,28 +25,30 @@
 
 int main(void) {
 	sei();
-
-	// Inicializace portů
-	DDRB = 0b00100010;
-	PORTB = 0b00000000;
 	
 	// OPRAVA: Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
-	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
+	//DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
 	// Zapneme Pull-up rezistory pro tyto piny
-	PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
+	//PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
 
-	spi_init();
 	st7735_init();
 	SoftwareTimerPool::initTimerPool(10);
-	
+
 	// ��zení stavů
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
 	
 	// Soundboard
-	Soundboard::initSoundboard();
+	//Soundboard::initSoundboard();
 
-	while (1) {
+	st7735_fill_rect(5, 5, 2, 3, COLOR_RED);
+
+	//
+	//draw_buffer(20, 5, "Ema ma maso a vari obed.", 100, COLOR_GREEN, COLOR_BG);
+
+	//draw_char(5, 5, 'u', COLOR_GREEN, COLOR_BG);
+
+	while (0) {
 		SoftwareTimerPool::tick();
 		Soundboard::play();
 

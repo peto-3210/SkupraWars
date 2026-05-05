@@ -10,11 +10,9 @@ void draw_infinity14x8(uint8_t x, uint8_t y, uint16_t color, uint16_t bg_color);
 
 void draw_ship(int x, int y, uint16_t color);
 
-void draw_char(int x, int y, char c, uint16_t color, uint16_t bg_color);
-
 void draw_string(int x, int y, const char* str, uint16_t color, uint16_t bg_color);
 
-// Klíèové slovo extern øíká, že pole je definované v jiném souboru
+// Klï¿½ï¿½ovï¿½ slovo extern ï¿½ï¿½kï¿½, ï¿½e pole je definovanï¿½ v jinï¿½m souboru
 extern const uint8_t powerup_rapid_bitmap[] PROGMEM;
 extern const uint8_t powerup_shield_bitmap[] PROGMEM;
 extern const uint8_t powerup_sentry_bitmap[] PROGMEM;

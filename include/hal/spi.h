@@ -3,6 +3,10 @@
 
 #include "libraries.h" // Obsahuje <avr/io.h> a další věci z projektu
 
+#define SPI_MOSI PB3
+#define SPI_SCK PB5
+#define SPI_CS PB2
+
 #ifdef __cplusplus
     extern "C" {
 #endif

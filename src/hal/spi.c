@@ -3,13 +3,10 @@
 void spi_init(void) {
     // Nastavení pinů pro SPI jako výstupní:
     // PB2 (CS), PB3 (MOSI), PB5 (SCK)
-    DDRB |= (1 << PB2) | (1 << PB3) | (1 << PB5);
-    
-    // MISO (PB4) je vstupní (pro jistotu, i když výchozí stav to zajišťuje)
-    DDRB &= ~(1 << PB4);
+    DDRB |= (1 << SPI_CS) | (1 << SPI_MOSI) | (1 << SPI_SCK);
 
     // Abychom se ujistili, že Slave (displej) není vybrán, nastavíme CS na HIGH
-    PORTB |= (1 << PB2);
+    PORTB |= (1 << SPI_CS);
 
     // Nastavení SPI kontrolního registru (SPCR):
     // SPE = SPI Enable 
