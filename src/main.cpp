@@ -6,8 +6,8 @@
 #include "SoftwareTimer.hpp"
 
 // Jednotliv� hern� moduly
-#include "Menu.hpp"
-#include "Graphics.hpp"
+#include "Graphics/Menu.hpp"
+#include "Graphics/Graphics.hpp"
 #include "Gameplay.hpp"
 #include "Gamestate.hpp"
 #include "Soundboard.hpp"
@@ -30,7 +30,7 @@ int main(void) {
 	DDRB = 0b00100010;
 	PORTB = 0b00000000;
 	
-	// OPRAVA: Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
+	// Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
 	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
 	// Zapneme Pull-up rezistory pro tyto piny
 	PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
