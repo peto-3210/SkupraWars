@@ -9,10 +9,11 @@ typedef struct {
     uint8_t  last_raw;        // last raw read
     uint32_t read_timeout;      // when raw last changed
     bool     pressed;         // state of button
-} ButtonState;
+    bool     rising_edge_announced    //true if function for rising edge reading was called     
+} ButtonStruct;
 
-static ButtonState enc_btn = { 0, 0, 0, false };
-static ButtonState btn2    = { 0, 0, 0, false };
+static ButtonStruct enc_btn = { 0, 0, 0, false, false };
+static ButtonStruct btn2    = { 0, 0, 0, false, false };
 
 void input_init(void) {
     // Set PD2-PD5 as inputs with pull-ups
@@ -29,9 +30,9 @@ void input_init(void) {
 // Encoder A falling edge — direction determined by B
 ISR(INT0_vect) {
     if (PIND & (1 << ENC_B_PIN)) {
-        enc_delta -= (enc_delta >= -MAX_TICKS) ? 1 : 0;   // CCW
+        enc_delta += (enc_delta <= +MAX_TICKS) ? 1 : 0;   // CCW
     } else {
-        enc_delta += (enc_delta <= +MAX_TICKS) ? 1 : 0;   // CW
+        enc_delta -= (enc_delta >= -MAX_TICKS) ? 1 : 0;   // CW
     }
 }
 
@@ -45,7 +46,7 @@ int8_t input_get_encoder_ticks(void) {
 }
 
 // Generic debounce + edge detection helper
-void button_check(ButtonState *btn, uint8_t pin) {
+void button_check(ButtonStruct *btn, uint8_t pin) {
     uint8_t raw = (PIND & (1 << pin)) ? 1 : 0;
     uint32_t now = micros();
 
@@ -62,6 +63,9 @@ void button_check(ButtonState *btn, uint8_t pin) {
     if (btn->constant_read_num >= CONSTANT_READ_NUM) {
         btn->constant_read_num = 0;
         btn->pressed = !raw;
+        if (btn->pressed == false){
+            btn->rising_edge_announced = false;
+        }
     }
 }
 
@@ -74,6 +78,22 @@ bool input_encoder_button_pressed(void) {
     return enc_btn.pressed;
 }
 
-bool input_button2_pressed(void) {
+bool input_fire_button_pressed(void) {
     return btn2.pressed;
+}
+
+bool input_encoder_button_rising(){
+    if (enc_btn.pressed == true && enc_btn.rising_edge_announced == false){
+        enc_btn.rising_edge_announced = true;
+        return true;
+    }
+    return false;
+}
+
+bool input_fire_button_rising(){
+    if (btn2.pressed == true && btn2.rising_edge_announced == false){
+        btn2.rising_edge_announced = true;
+        return true;
+    }
+    return false;
 }

@@ -5,16 +5,7 @@
 #include "Utilities/SoftwareTimer.hpp"
 #include "hal/st7735.h"
 #include <avr/io.h>
-
-// Definice barev
-#define COLOR_GREEN		0x07E0
-#define COLOR_BLUE		0x001F
-#define COLOR_RED		0xF800
-#define COLOR_WHITE		0xFFFF
-#define COLOR_CYAN		0x07FF
-#define COLOR_ORANGE	0xFD20
-#define COLOR_MAGENTA   0xF81F
-#define COLOR_BG        0x0000 // Černé pozadí
+#include <hal/input.h>
 
 // --- NASTAVENÍ POLOŽEK MENU ---
 #define NUM_ITEMS 3
@@ -27,11 +18,6 @@ const char* MENU_ITEMS[NUM_ITEMS] = {
 
 // --- LOKÁLNÍ PROMĚNNÉ ---
 static uint8_t selected_item = 0; // Která položka je právě vybraná
-static uint8_t last_enc_A;        // Pro čtení enkodéru
-
-
-static MenuButtonState menu_btn_state = MENU_BTN_IDLE;
-static SoftwareTimer* menuBtnTimer;
 
 // Funkce pro kompletní (nebo částečné) překreslení menu
 static void draw_menu() {
@@ -55,71 +41,38 @@ static void draw_menu() {
 }
 
 void menu_init(void) {
-    menuBtnTimer = SoftwareTimerPool::acquireTimer();
     selected_item = 0;
-    last_enc_A = (PIND & (1 << PD2)) >> PD2;
     
     st7735_fill_screen(0xFFFF); // Bílé pozadí
     draw_menu();
 }
 
+
 GameState menu_tick(void) {
     // --- 1. ČTENÍ ENKODÉRU (SCROLLOVÁNÍ) ---
-    uint8_t current_enc_A = (PIND & (1 << PD2)) >> PD2;
-
-    if (current_enc_A != last_enc_A) {
-        if (current_enc_A == 0) {
-            uint8_t current_enc_B = (PIND & (1 << PD3)) >> PD3;
-            
-            if (current_enc_B != current_enc_A) {
-                // Scrollování nahoru
-                if (selected_item > 0) {
-                    selected_item--;
-                    draw_menu(); // Překreslíme změnu
-                }
-            } else {
-                // Scrollování dolů
-                if (selected_item < NUM_ITEMS - 1) {
-                    selected_item++;
-                    draw_menu(); // Překreslíme změnu
-                }
-            }
+    int8_t ticks = input_get_encoder_ticks();
+    if (ticks < 0) {
+        // Scrollování dolů
+        if (selected_item < NUM_ITEMS - 1) {
+            selected_item++;
+            draw_menu();
         }
-        last_enc_A = current_enc_A;
+    } else if (ticks > 0) {
+        // Scrollování nahoru
+        if (selected_item > 0) {
+            selected_item--;
+            draw_menu();
+        }
     }
     
     // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
-    switch (menu_btn_state) {
-        case MENU_BTN_IDLE:
-            if (!(PIND & (1 << PD5))) {
-                menuBtnTimer->startTimerUs(50000); // 50ms debounce
-                menu_btn_state = MENU_BTN_WAIT_DEBOUNCE;
-            }
-            break;
-
-        case MENU_BTN_WAIT_DEBOUNCE:
-            if (menuBtnTimer->isDone()) {
-                if (!(PIND & (1 << PD5))) {
-                    
-                    if (selected_item == 0) { // Kliknuto na "PRIPOJIT"
-	                    gameplay_init();      // Než přepneme, nastavíme hru do výchozího stavu
-	                    menu_btn_state = MENU_BTN_WAIT_RELEASE;
-	                    return STATE_GAMEPLAY; 
-                    }
-                    
-                    menu_btn_state = MENU_BTN_WAIT_RELEASE;
-                } else {
-                    menu_btn_state = MENU_BTN_IDLE;
-                }
-            }
-            break;
-
-        case MENU_BTN_WAIT_RELEASE:
-            if (PIND & (1 << PD5)) {
-                menu_btn_state = MENU_BTN_IDLE;
-            }
-            break;
+    if (input_encoder_button_rising() == true){
+        switch (selected_item){
+            case START_GAME:
+                return STATE_GAMEPLAY;
+                break;
+        }
     }
-	
-	return STATE_MENU; // Pokud se nic nezměnilo, zůstáváme v menu
+    
+    return STATE_MENU;
 }

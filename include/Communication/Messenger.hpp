@@ -1,6 +1,9 @@
 #include "Datalink.hpp"
 #include "Gameplay.hpp"
 
+#ifndef MESSENGER
+#define MESSENGER
+
 using recvPacketState = Datalink::recvPacketState;
 using Packet = Datalink::Packet;
 class Messenger {
@@ -173,3 +176,6 @@ class Messenger {
         recvMessages();
     }
 };
+
+
+#endif

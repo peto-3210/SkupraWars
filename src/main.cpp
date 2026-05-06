@@ -43,11 +43,11 @@ void tick_all(){
 
 int main(void) {
 	sei();
-	
+	init_all();
 	// Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
-	DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
+	//DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
 	// Zapneme Pull-up rezistory pro tyto piny
-	PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
+	//PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
 
 	
 	
@@ -59,7 +59,7 @@ int main(void) {
 	
 
 	while (1) {
-		
+		tick_all();
 
 		// HLAVN� STAVOV� AUTOMAT
 		switch (current_state) {
