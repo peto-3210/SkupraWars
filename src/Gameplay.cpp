@@ -548,9 +548,9 @@ void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 			player_lasers[i].spawn_time = micros(); // Pro laser
 
 			// Zvuky přesunuty sem
-			if (wep == WEP_RAILGUN) Soundboard::playSound(Soundboard::sfx_railgun);
-			if (wep == WEP_ROCKET) Soundboard::playSound(Soundboard::sfx_rocket);
-			if (wep == WEP_LASER) Soundboard::playSound(Soundboard::sfx_laser);
+			if (wep == WEP_RAILGUN) Soundboard::playSound(Soundboard::sfx_hit_enemy);
+			if (wep == WEP_ROCKET) Soundboard::playSound(Soundboard::sfx_system_crash);
+			if (wep == WEP_LASER) Soundboard::playMelody(Soundboard::grandVictory);
 			if (wep == WEP_BURST) Soundboard::playSound(Soundboard::sfx_burst);
 
 			// TADY ODESLAT DATA: Střela se právě narodila, řekneme to protihráči!
