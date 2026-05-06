@@ -154,8 +154,58 @@ void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* bu
 }
 
 
+void draw_8bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t color, uint16_t bg_color) {
+    uint8_t w = 8;
+    uint8_t h = 8;
+    if (st7735_set_draw_area(x, y, w, h) == 0) return;
+
+    uint8_t bitmap_buffer[8] = {};
+    memcpy_P(bitmap_buffer, bitmap_array, 8);
+
+    ST7735_DC_DATA();
+	ST7735_CS_LOW();
+    
+    for (uint8_t row = 0; row < h; row++) { // Výška znaku
+        for (uint8_t col = w; col > 0; col--) { // Znak je široký 8 nebo 16 pixelů
+            if ((bitmap_buffer[row] & (1U << (col - 1))) != 0){
+                write_color(color);
+            } 
+            else {
+                write_color(bg_color);
+            }
+        }
+    }
+    ST7735_CS_HIGH();
+}
+
+
+void draw_16bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t color, uint16_t bg_color) {
+    uint8_t w = 16;
+    uint8_t h = 16;
+    if (st7735_set_draw_area(x, y, w, h) == 0) return;
+
+    uint16_t bitmap_buffer[16] = {};
+    memcpy_P(bitmap_buffer, bitmap_array, 32);
+
+    ST7735_DC_DATA();
+	ST7735_CS_LOW();
+    
+    for (uint8_t row = 0; row < h; row++) { // Výška znaku
+        for (uint8_t col = w; col > 0; col--) { // Znak je široký 8 nebo 16 pixelů
+            if ((bitmap_buffer[row] & (1U << (col - 1))) != 0){
+                write_color(color);
+            } 
+            else {
+                write_color(bg_color);
+            }
+        }
+    }
+    ST7735_CS_HIGH();
+}
+
+
 // Funkce, která projde celý text a nakreslí ho písmenko po písmenku
-void draw_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color) {
+void draw_char_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color) {
     if (len == 0) len = strlen(buffer);
     if(len > 20) len = 20;
     if (st7735_set_draw_area(x, y, len * (CHAR_WIDTH + 1), CHAR_HEIGHT + (ADD_BLANK_LINE > 0)) == 0) return;

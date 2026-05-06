@@ -1,5 +1,5 @@
-#include "Soundboard.hpp"
-#include "SoftwareTimer.hpp"
+#include "Utilities/Soundboard.hpp"
+#include "Utilities/SoftwareTimer.hpp"
 
 SoftwareTimer* Soundboard::toneTimer = nullptr;
 bool Soundboard::isPlaying = false;

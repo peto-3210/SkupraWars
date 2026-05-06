@@ -64,8 +64,14 @@ void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color);
 // Vykresli obdelnikovy objekt z bufferu
 void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* buffer);
 
+//Vykresli objekt definovany 8x8 bitmapou
+void draw_8bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t color, uint16_t bg_color);
+
+//Vykresli objekt definovany 16x16 bitmapou
+void draw_16bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t color, uint16_t bg_color);
+
 // Vykresli pole znaku, pokud je delka 0, pocita se stringem na vstupu
-void draw_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color);
+void draw_char_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color);
 
 #ifdef __cplusplus
     }

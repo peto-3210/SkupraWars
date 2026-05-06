@@ -95,7 +95,7 @@ class Sound {
     }; 
 };
 
-using Sound4 = Sound<8>;
+using Sound4 = Sound<16>;
 using Melody = Sound<64>;
 
 class Soundboard {
@@ -115,9 +115,9 @@ class Soundboard {
     static Melody* currentMelody;
     static toneRecord currentRecord;
 
-    static const uint8_t soundNum = 8;
+    static const uint8_t soundNum = 16;
     static Sound4 soundList[soundNum];
-    static const uint8_t melodyNum = 4;
+    static const uint8_t melodyNum = 8;
     static Melody melodyList[melodyNum];
 
     static void initPlaylist();
@@ -130,12 +130,16 @@ class Soundboard {
 		sfx_rocket = 2,
 		sfx_laser = 3,
 		sfx_noAmmo = 4,
-		sfx_powerup_use = 5
+		sfx_powerup_use = 5,
+        sfx_fatal_error = 6,
+        sfx_system_crash = 7,
+        sfx_hit_enemy = 8
     };
 
     enum melodies {
         imperialMarch,
-        zakazaneUvolneni
+        zakazaneUvolneni,
+        grandVictory
     };
 
     // Initializes soundboard.
