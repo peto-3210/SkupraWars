@@ -201,7 +201,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="include\Datalink.hpp">
+    <Compile Include="include\Communication\Datalink.hpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\Gameplay.hpp">
@@ -210,7 +210,7 @@
     <Compile Include="include\Gamestate.hpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\Graphics.hpp">
+    <Compile Include="include\Graphics\Graphics.hpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\hal\hardware_timer.h">
@@ -228,10 +228,13 @@
     <Compile Include="include\hal\uart.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\Menu.hpp">
+	<Compile Include="include\hal\input.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\Messenger.hpp">
+    <Compile Include="include\Graphics\Menu.hpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\Communication\Messenger.hpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\SoftwareTimer.hpp">
@@ -240,13 +243,13 @@
     <Compile Include="include\Soundboard.hpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\Datalink.cpp">
+    <Compile Include="src\Communication\Datalink.cpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\Gameplay.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\Graphics.cpp">
+    <Compile Include="src\Graphics\Graphics.cpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\hal\hardware_timer.c">
@@ -261,13 +264,16 @@
     <Compile Include="src\hal\uart.c">
       <SubType>compile</SubType>
     </Compile>
+	<Compile Include="src\hal\input.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\main.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\Menu.cpp">
+    <Compile Include="src\Graphics\Menu.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\Messenger.cpp">
+    <Compile Include="src\Communication\Messenger.cpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\Playlist.cpp">

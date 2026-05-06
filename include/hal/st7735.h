@@ -11,7 +11,7 @@
 #define ST7735_WIDTH 128
 #define ST7735_HEIGHT 160
 #define RESET_PIN PB0
-#define DATA_SELECT_PIN PD0
+#define DATA_SELECT_PIN PD7
 
 // Makra pro rychlé přepínání stavu řídících pinů
 #define ST7735_CS_LOW()  PORTB &= ~(1 << SPI_CS)
@@ -49,8 +49,8 @@ void st7735_write_command(uint8_t cmd);
 // Odeslání dat do displeje
 void st7735_write_data(uint8_t data);
 
-// Nastavení kreslící oblasti (okna) pro následné kreslení
-void st7735_set_draw_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
+// Nastavení kreslící oblasti (okna) pro následné kreslení, vrati false pokud je mimo displeje
+bool st7735_set_draw_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h);
 
 // Vyplnění celého displeje jednou barvou (565 RGB formát)
 void st7735_fill_screen(uint16_t color);
@@ -61,10 +61,10 @@ void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color
 // Vykreslí jeden pixel na zadaných souřadnicích
 void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color);
 
-// Vykresli 1 znak
-void draw_char(int x, int y, char c, uint16_t color, uint16_t bg_color);
+// Vykresli obdelnikovy objekt z bufferu
+void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* buffer);
 
-// Vykresli pole znaku
+// Vykresli pole znaku, pokud je delka 0, pocita se stringem na vstupu
 void draw_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color);
 
 #ifdef __cplusplus

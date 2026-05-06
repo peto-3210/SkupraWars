@@ -6,51 +6,52 @@
 #include "SoftwareTimer.hpp"
 
 // Jednotliv� hern� moduly
-#include "Menu.hpp"
-#include "Graphics.hpp"
+#include "Graphics/Menu.hpp"
+#include "Graphics/Graphics.hpp"
 #include "Gameplay.hpp"
 #include "Gamestate.hpp"
 #include "Soundboard.hpp"
-
-// Definice barev
-#define COLOR_GREEN		0x07E0
-#define COLOR_BLUE		0x001F
-#define COLOR_RED		0xF800
-#define COLOR_WHITE		0xFFFF
-#define COLOR_CYAN		0x07FF
-#define COLOR_ORANGE	0xFD20
-#define COLOR_MAGENTA   0xF81F
-#define COLOR_BG        0x0000 // Černé pozadí
+#include "Communication/Messenger.hpp"
+#include <hal/input.h>
 
 
 int main(void) {
 	sei();
-	
-	// OPRAVA: Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
-	//DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
-	// Zapneme Pull-up rezistory pro tyto piny
-	//PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
 
 	st7735_init();
-	SoftwareTimerPool::initTimerPool(10);
+	st7735_fill_rect(5, 5, 2, 3, COLOR_RED);
+	//_delay_ms(1000);
+	SoftwareTimerPool::initTimerPool();
+	Soundboard::initSoundboard();
+	Datalink::initDatalink();
+	input_init();
+
+	st7735_fill_rect(5, 5, 2, 3, COLOR_GREEN);
 
 	// ��zení stavů
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
 	
-	// Soundboard
-	//Soundboard::initSoundboard();
 
-	st7735_fill_rect(5, 5, 2, 3, COLOR_RED);
+	
+	//_delay_ms(5000);
 
 	//
-	//draw_buffer(20, 5, "Ema ma maso a vari obed.", 100, COLOR_GREEN, COLOR_BG);
+	draw_buffer(20, 5, "Ema ma maso a vari", 0, COLOR_GREEN, COLOR_BG);
 
-	//draw_char(5, 5, 'u', COLOR_GREEN, COLOR_BG);
+	if (Messenger::initTopology(3, 0x0004) == false){
+		Soundboard::playSound(Soundboard::sfx_laser);
+	}
+	else {
+		Soundboard::playSound(Soundboard::sfx_rocket);
+	}
+	
 
-	while (0) {
+	while (1) {
 		SoftwareTimerPool::tick();
 		Soundboard::play();
+	}
+	/*{
 
 		// HLAVN� STAVOV� AUTOMAT
 		switch (current_state) {
@@ -95,5 +96,5 @@ int main(void) {
 				break;
 			}
 		}
-	}
+	}*/
 }

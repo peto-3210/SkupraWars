@@ -20,7 +20,7 @@ void hardware_timer_init(uint8_t period){
 
 void hardware_pwm_init(){
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-        DDRB |= PWM_PIN; //Enables OC1A pin
+        DDRB |= (1 << PWM_PIN); //Enables OC1A pin
         TCNT1 = 0;
         OCR1A = 0;
         TIMSK1 = 0;

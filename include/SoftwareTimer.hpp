@@ -88,7 +88,7 @@ class SoftwareTimerPool{
      * 
      * @param periodUS Period of hardware timer in microseconds. This value determines the resolution of software timers.
      */
-    static void initTimerPool(uint8_t periodUS);
+    static void initTimerPool(uint8_t periodUS = 10);
 
     /**
      * @brief Obtains timer. Timer is automatically added to timer pool,

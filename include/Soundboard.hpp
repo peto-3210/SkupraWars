@@ -4,10 +4,6 @@
 #ifndef SOUNDOARD
 #define SOUNDBOARD
 
-#define SOUNDBOARD_OUTPUT_PIN_PORT PORTB
-#define SOUNDBOARD_OUTPUT_PIN_DDR DDRB
-#define SOUNDBOARD_OUTPUT_PIN_NUM 1
-
 enum tone: uint16_t {
     none = 0,
 	dS = 250,

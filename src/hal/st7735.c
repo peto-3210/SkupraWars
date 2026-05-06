@@ -85,9 +85,9 @@ void st7735_init(void) {
 }
 
 
-void st7735_set_draw_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
-    if (x + w - 1 >= ST7735_WIDTH) w = ST7735_WIDTH; 
-    if (y + h - 1 >= ST7735_HEIGHT) h = ST7735_HEIGHT;
+bool st7735_set_draw_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
+    if (x + w - 1 >= ST7735_WIDTH) return false; 
+    if (y + h - 1 >= ST7735_HEIGHT) return false;
 
     // Nastavení sloupců (X)
     st7735_write_command(0x2A);
@@ -101,6 +101,7 @@ void st7735_set_draw_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
     
     // Příkaz pro zápis do paměti RAM (kreslení)
     st7735_write_command(0x2C);
+    return true;
 }
 
 
@@ -120,10 +121,7 @@ void st7735_fill_screen(uint16_t color) {
 
 
 void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color) {
-	// 1. Ochrana proti vykreslení mimo obrazovku
-	if (x >= 128 || y >= 160) return;
-
-    st7735_set_draw_area(x, y, w, h);
+    if (st7735_set_draw_area(x, y, w, h) == 0) return;
 	
 	ST7735_DC_DATA();
 	ST7735_CS_LOW();
@@ -138,7 +136,7 @@ void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color
 
 
 void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {
-	st7735_set_draw_area(x, y, 1, 1);
+	if (st7735_set_draw_area(x, y, 1, 1) == 0) return;
 
 	ST7735_DC_DATA();
 	ST7735_CS_LOW();
@@ -147,43 +145,20 @@ void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {
 }
 
 
-// Funkce, která nakreslí JEDEN znak podle naší ASCII tabulky nahoře
-void draw_char(int x, int y, char c, uint16_t color, uint16_t bg_color) {
-	if (c < 32 || c > 126) return; // Znaky mimo tabulku ignorujeme
-    st7735_set_draw_area(x, y, CHAR_WIDTH + 1, CHAR_HEIGHT + (ADD_BLANK_LINE > 0)); //TODO
+void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* buffer){
+    if (st7735_set_draw_area(x, y, w, h) == 0) return;
 
-    uint8_t buffer[CHAR_WIDTH];
-    memcpy_P(buffer, &font5x7[(c - 32) * CHAR_WIDTH], CHAR_WIDTH);
-    ST7735_DC_DATA();
-	ST7735_CS_LOW();
-	
-	for (uint8_t i = 1; i < (1 << CHAR_HEIGHT); i <<= 1) { // Výška znaku
-		for (uint8_t j = 0; j < CHAR_WIDTH; j++) { // Font je široký 5 pixelů
-			if ((buffer[j] & i) != 0){
-                write_color(color);
-            } 
-            else {
-                write_color(bg_color);
-            }
-		}
-        write_color(bg_color);// Mezera mezi znaky
-	}
-
-    if (ADD_BLANK_LINE == true){
-        for (uint8_t i = 0; i < CHAR_WIDTH; ++i){
-            write_color(bg_color);
-        }
+    for (uint8_t i = 0; i < w*h; ++i){
+        write_color(buffer[i]);
     }
-    ST7735_CS_HIGH();
 }
 
 
 // Funkce, která projde celý text a nakreslí ho písmenko po písmenku
 void draw_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color) {
+    if (len == 0) len = strlen(buffer);
     if(len > 20) len = 20;
-    if(y + CHAR_HEIGHT + (ADD_BLANK_LINE > 0) > ST7735_HEIGHT) return;
-    if (x + (CHAR_WIDTH + 1) * len > ST7735_WIDTH) return;
-    st7735_set_draw_area(x, y, len * (CHAR_WIDTH + 1), CHAR_HEIGHT + (ADD_BLANK_LINE > 0));
+    if (st7735_set_draw_area(x, y, len * (CHAR_WIDTH + 1), CHAR_HEIGHT + (ADD_BLANK_LINE > 0)) == 0) return;
 
     uint8_t char_buffer[len * CHAR_WIDTH];
     for (uint8_t i = 0; i < len; ++i){

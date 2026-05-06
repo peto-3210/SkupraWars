@@ -28,7 +28,7 @@ volatile transmission_handler rx_handler = {};
 void uart_begin(uint16_t baud_rate_constant) {
     UCSR0A = 0; //Nothing interesting to set here
     UCSR0B = 0b00011000; //Enable transmitter and receiver
-    UCSR0C = 0b00100110; //Set even parity, 8 data bits and 1 stop bit
+    UCSR0C = 0b00000110; //Set no parity, 8 data bits and 1 stop bit
 
     UBRR0L = baud_rate_constant & 0xff;
     UBRR0H = baud_rate_constant >> 8;
@@ -56,7 +56,7 @@ uint8_t uart_recv(uint8_t* data, uint8_t length){
 }
 
 ISR(USART_RX_vect){
-    if (rx_handler.iterator <= UART_BUFFER_LEN){
+    if (rx_handler.iterator < UART_BUFFER_LEN){
         rx_handler.data_buffer[rx_handler.iterator++] = UDR0;
         
     }
@@ -73,7 +73,7 @@ uint8_t uart_send(uint8_t* data, uint8_t length){
         }
 
         for (uint8_t i = 0; i < length; ++i){
-            tx_handler.data_buffer[tx_handler.iterator + i] = data[i];
+            tx_handler.data_buffer[tx_handler.iterator + i] = data[length - i - 1];
         }
         tx_handler.iterator += length;
         UART_TX_UDRE_INT_ON()
@@ -82,7 +82,11 @@ uint8_t uart_send(uint8_t* data, uint8_t length){
 }
 
 uint8_t uart_rx_bytenum(){
-    return rx_handler.iterator;
+    uint8_t state = 0;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        state = rx_handler.iterator;
+    }
+    return state;
 }
 
 void uart_flush_rx(){
