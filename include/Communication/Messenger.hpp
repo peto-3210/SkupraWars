@@ -165,4 +165,11 @@ class Messenger {
      * @returns False if error occured, true otherwise
      */
     static bool sendHP(uint8_t hp, uint8_t position);
+
+    /**
+     * @brief Receives and forwards packets
+     */
+    static void commLoop(){
+        recvMessages();
+    }
 };

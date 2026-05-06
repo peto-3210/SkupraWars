@@ -11,6 +11,9 @@
 #include "Gameplay.hpp"
 #include "Gamestate.hpp"
 #include "Utilities/Soundboard.hpp"
+#include <Communication/Datalink.hpp>
+#include <hal/input.h>
+#include <Communication/Messenger.hpp>
 
 // Definice barev
 #define COLOR_GREEN		0x07E0
@@ -22,6 +25,21 @@
 #define COLOR_MAGENTA   0xF81F
 #define COLOR_BG        0x0000 // Černé pozadí
 
+void init_all(){
+    spi_init();
+	st7735_init();
+    input_init();
+	SoftwareTimerPool::initTimerPool();
+    Soundboard::initSoundboard();
+    Datalink::initDatalink();
+}
+
+void tick_all(){
+    input_tick();
+    SoftwareTimerPool::tick();
+	Soundboard::play();
+    Messenger::commLoop();
+}
 
 int main(void) {
 	sei();
@@ -31,20 +49,17 @@ int main(void) {
 	// Zapneme Pull-up rezistory pro tyto piny
 	PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
 
-	spi_init();
-	st7735_init();
-	SoftwareTimerPool::initTimerPool(10);
+	
 	
 	// ��zení stavů
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
 	
 	// Soundboard
-	Soundboard::initSoundboard();
+	
 
 	while (1) {
-		SoftwareTimerPool::tick();
-		Soundboard::play();
+		
 
 		// HLAVN� STAVOV� AUTOMAT
 		switch (current_state) {
