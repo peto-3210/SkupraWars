@@ -672,7 +672,7 @@ void spawn_enemy_projectile(uint8_t received_x, bool direction, WeaponType wep_t
 		if (!enemy_lasers[i].active) {
 			enemy_lasers[i].spawn_time = micros(); 
 			enemy_lasers[i].active = true;
-			enemy_lasers[i].x = received_x;
+			enemy_lasers[i].x = mirrored_x;
 			enemy_lasers[i].y = TOP_HUD_Y_END + 1; // Začíná nahoře
 			enemy_lasers[i].type = wep_type; // Zbraň podle parametru
 			
