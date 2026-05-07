@@ -45,15 +45,18 @@ void draw_ship(int x, int y, uint16_t color) {
 
 /************************* draw_dotted_rect *************************/
 // Vykreslí tečkovaný obrys
-void draw_dotted_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
-    for (int16_t i = 0; i <= w; i += 2) {
-        st7735_draw_pixel(x + i, y, color);
-        st7735_draw_pixel(x + i, y + h, color);
-    }
-    for (int16_t i = 0; i <= h; i += 2) {
-        st7735_draw_pixel(x, y + i, color);
-        st7735_draw_pixel(x + w, y + i, color);
-    }
+void draw_dotted_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {  
+    // 1. Horní hrana (výška 1 pixel)
+    st7735_fill_rect(x, y, w + 1, 1, color);
+    
+    // 2. Dolní hrana (výška 1 pixel)
+    st7735_fill_rect(x, y + h, w + 1, 1, color);
+    
+    // 3. Levá hrana (šířka 1 pixel, od shora až dolů)
+    st7735_fill_rect(x, y, 1, h + 1, color);
+    
+    // 4. Pravá hrana (šířka 1 pixel, od shora až dolů)
+    st7735_fill_rect(x + w, y, 1, h + 1, color);
 }
 
 /************************* update_inventory_ui *************************/
