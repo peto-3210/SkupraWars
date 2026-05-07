@@ -99,7 +99,7 @@ int main(void) {
 
 			case STATE_SCORE: { 
 				if (state_just_changed) {
-					st7735_fill_screen(COLOR_BG);
+					st7735_fill_screen(COLOR_MAGENTA);
 					state_just_changed = false;
 				}
 				break;

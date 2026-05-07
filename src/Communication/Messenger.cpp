@@ -245,6 +245,9 @@ void Messenger::disableNeighbour(uint8_t neighbourId){
 bool Messenger::sendToNeighbour(Packet& packet, bool direction){
     packet.direction = direction;
     packet.distance = findNeighbour(direction);
+    if (packet.distance == MAX_NEIGHBOURS){
+        return false;
+    }
     return sendMessage(packet);
 }
 
@@ -256,6 +259,9 @@ bool Messenger::sendAnnouncement(Packet& packet){
 bool Messenger::sendProjectile(WeaponType projectile, uint8_t position){
     Packet p = {0};
     bool direction = position < HALF_SCREEN_LENGTH;
+    if (direction == false){
+        position -= HALF_SCREEN_LENGTH;
+    }
 
     p.function = shootProjectileFun;
     p.payload.projectile.type = projectile;
@@ -288,7 +294,7 @@ bool Messenger::sendHP(uint8_t hp, uint8_t position){
     return sendToNeighbour(p, false);
 }
 
-uint8_t Messenger::getPacket(packetPayload& payload){
+uint8_t Messenger::getPacket(packetPayload& payload, bool& direction){
     if (messageBuffer.getMessageNum() == 0){
         return 0;
     }

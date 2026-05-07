@@ -16,6 +16,7 @@ class Messenger {
     static const uint32_t REPLY_TIMEOUT_US = 10000;
     static const uint8_t HALF_SCREEN_LENGTH = 64;
 
+    public:
     enum functionCode{
         announceFun,
         shootProjectileFun,
@@ -37,6 +38,7 @@ class Messenger {
         songSyncAnn,
     };
 
+    private:
     struct receivedMessages{
         Packet messages[RECEIVED_MESSAGES_BUFFER_SIZE];
         uint8_t messageNum;
@@ -201,7 +203,7 @@ class Messenger {
      * @param packet Packet that will be filled with data
      * @return Function code, or 0 if no packet is available
      */
-    static uint8_t getPacket(packetPayload& p);
+    static uint8_t getPacket(packetPayload& p, bool& direction);
 
     /**
      * @brief Retrieves single packet from announcementBuffer

@@ -20,6 +20,7 @@ extern "C" {
 // Debounce time in milliseconds
 #define READ_DELAY_MS   25
 #define CONSTANT_READ_NUM 2
+#define CONSTANT_READ_NUM 2
 
 //Max number of encoder ticks
 //#define MAX_TICKS 127
@@ -32,7 +33,15 @@ void input_init(void);
 int8_t input_get_encoder_dir();
 
 // Returns current_button_state
+// Returns current_button_state
 bool input_encoder_button_pressed(void);
+// Returns current_button_state
+bool input_fire_button_pressed(void);
+
+// Returns true if rising edge occured (only once)
+bool input_encoder_button_rising(void);
+// Returns true if rising edge occured (ony once)
+bool input_fire_button_rising(void);
 // Returns current_button_state
 bool input_fire_button_pressed(void);
 

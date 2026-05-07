@@ -67,7 +67,7 @@ void update_inventory_ui(uint8_t count, PowerUpType* inventory) {
 
     // 3. Vykreslíme ikony, co hráč aktuálně má (LIFO)
     for (int i = 0; i < count; i++) {
-        uint8_t draw_y = 80 + (i * 10);
+        uint8_t draw_y = 100 - (i * 10);
         draw_powerup8x8(2, draw_y, inventory[i], COLOR_BG);
     }
 }

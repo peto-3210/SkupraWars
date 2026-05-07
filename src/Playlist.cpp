@@ -127,35 +127,68 @@ const toneRecord iMarchToneRecord[] PROGMEM = {
 	{a, 1000}
 };
 
-// Zakázané uvolnění 
+// NEVER GONNA GIVE YOU UP, NEVERE GONNA LET YOU DOWN
+const toneRecord rickRollRiffToneRecord[] PROGMEM = {
+    // --- Bicí úvod (ponechán pro kontext) ---
+    {aH, 20}, {none, 50}, {aH, 20}, {none, 50}, 
+    {aH, 20}, {aH, 20}, {none, 100},           
+
+    // --- Ten hlavní riff ---
+    {aS, 120},  // Da
+    {cH, 120},  // da
+    {f, 120},   // da
+    {cH, 120},  // da
+    
+    {dH, 250},  // DÁÁ (vyšší tón)
+    {fH, 120},  // da
+    {dH, 120},  // da
+    {cH, 350},  // DÁÁÁ...
+    
+    {none, 50}, // mikro pauza pro oddělení
+    
+    {aS, 120},  // Da
+    {cH, 120},  // da
+    {f, 120},   // da
+    {cH, 120},  // da
+    
+    {cH, 250},  // DÁ (střední)
+    {aS, 150},  // da
+    {a, 150},   // da
+    {g, 350}    // DŮŮŮ...
+};
+
+// Zakázané uvolnění (Turbo Arcade Edition)
 const toneRecord zakazaneUvolneniToneRecord[] PROGMEM = {
-	// První motiv
-	{d, 200},   // Pam
-	{none, 50}, // (krátká pauza pro údernost)
-	{d, 100},   // ta
-	{g, 150},   // da
-	{none, 50},
-	{g, 200},   // dam
-	
-	{none, 200}, // pauza mezi frázemi
+    // --- 1. MOTIV (D -> G) ---
+    {d, 150}, {none, 30},  // PAM (důrazný úder)
+    {d, 80},               // ta
+    {g, 150},              // DA
+    {none, 20},
+    {g, 150},              // DAM
+    {none, 100},           // krátký oddech
 
-	// Druhý motiv (posun na A)
-	{d, 200},   // Pam
-	{none, 50},
-	{d, 100},   // ta
-	{a, 150},   // da
-	{none, 50},
-	{a, 200},   // dam
-	
-	{none, 200},
+    // --- 2. MOTIV (D -> A) ---
+    {d, 150}, {none, 30},  // PAM
+    {d, 80},               // ta
+    {a, 150},              // DA
+    {none, 20},
+    {a, 150},              // DAM
+    {none, 100},
 
-	// Třetí motiv (variace)
-	{d, 200},
-	{none, 50},
-	{d, 100},
-	{g, 150},
-	{fHS, 150}, // Sestup přes F#
-	{e, 300}    // do ztracena
+    // --- 3. MOTIV (Gradace) ---
+    {d, 150}, {none, 30},
+    {d, 80}, 
+    {g, 120}, 
+    {fHS, 120},            // Rychlejší sestup
+    {e, 120},
+    {d, 250},              // Návrat do základní tóniny (D)
+
+    // --- 4. ZÁVĚR (Odpich) ---
+    {none, 50},
+    {a, 100}, 
+    {g, 100}, 
+    {fHS, 100}, 
+    {e, 200}               // Zakončení fráze
 };
 
 void Soundboard::initPlaylist(){
@@ -170,5 +203,6 @@ void Soundboard::initPlaylist(){
 	soundList[sfx_system_crash].setToneBuffer(sfx_system_crashToneRecord, sizeof(sfx_system_crashToneRecord) / sizeof(toneRecord));
 	melodyList[grandVictory].setToneBuffer(grandVictoryToneRecord, sizeof(grandVictoryToneRecord) / sizeof(toneRecord));
 	melodyList[imperialMarch].setToneBuffer(iMarchToneRecord, sizeof(iMarchToneRecord) / sizeof(toneRecord));
+	melodyList[rickRollRiff].setToneBuffer(rickRollRiffToneRecord, sizeof(rickRollRiffToneRecord) / sizeof(toneRecord));
 	melodyList[zakazaneUvolneni].setToneBuffer(zakazaneUvolneniToneRecord, sizeof(zakazaneUvolneniToneRecord) / sizeof(toneRecord));
 }
