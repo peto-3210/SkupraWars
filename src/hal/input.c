@@ -15,6 +15,7 @@ typedef struct {
 
 static ButtonStruct enc_btn = { 0, 0, 0, false, false };
 static ButtonStruct btn2    = { 0, 0, 0, false, false };
+static ButtonStruct resetButton = {0};
 
 void input_init(void) {
     // Set PD2-PD5 as inputs with pull-ups
@@ -22,6 +23,8 @@ void input_init(void) {
                (1 << ENC_BTN_PIN) | (1 << BTN2_PIN));
     PORTD |=  (1 << ENC_A_PIN) | (1 << ENC_B_PIN) |
               (1 << ENC_BTN_PIN) | (1 << BTN2_PIN);
+
+    DDRB &= ~(1 << PB7);
 
     // INT0 on falling edge of encoder A pin
     //EICRA |= (1 << ISC01);    // ISC01=1, ISC00=0 → falling edge
@@ -76,7 +79,13 @@ int8_t input_get_encoder_dir(){
 
 // Generic debounce + edge detection helper
 void button_check(ButtonStruct *btn, uint8_t pin) {
-    uint8_t raw = (PIND & (1 << pin)) ? 1 : 0;
+    uint8_t raw;
+    if (pin == PB7){
+        raw = (PINB & (1 << pin)) ? 1 : 0;
+    }
+    else{
+        raw = (PIND & (1 << pin)) ? 1 : 0;
+    }
     uint32_t now = micros();
 
     if (raw != btn->last_raw) {
@@ -101,6 +110,7 @@ void button_check(ButtonStruct *btn, uint8_t pin) {
 void input_tick(){
     button_check(&enc_btn, ENC_BTN_PIN);
     button_check(&btn2, BTN2_PIN);
+    button_check(&resetButton, PB7);
 }
 
 bool input_encoder_button_pressed(void) {
@@ -122,6 +132,14 @@ bool input_encoder_button_rising(){
 bool input_fire_button_rising(){
     if (btn2.pressed == true && btn2.rising_edge_announced == false){
         btn2.rising_edge_announced = true;
+        return true;
+    }
+    return false;
+}
+
+bool input_reset_button_rising(){
+    if (resetButton.pressed == true && resetButton.rising_edge_announced == false){
+        resetButton.rising_edge_announced = true;
         return true;
     }
     return false;

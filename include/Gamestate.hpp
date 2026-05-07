@@ -7,5 +7,6 @@ typedef enum {
     STATE_SCORE,    // Zatím nevyužito
     STATE_DEFEAT,
     STATE_VICTORY,
-    STATE_DEAD_END
+    STATE_DEAD_END,
+    STATE_FATAL_ERROR
 } GameState;

@@ -128,6 +128,8 @@ void draw_weapon_selection_box(WeaponType wep, uint16_t color) {
 	st7735_fill_rect(slot_x + 19, y, 1, 18, color);
 }
 
+
+
 /************************* gameplay_draw_bottom_hud *************************/
 // Vykreslí spodní HUD (statické prvky + zbraně)
 void gameplay_draw_bottom_hud(uint8_t your_health, WeaponType active_weapon, uint8_t ammo_counts[]) {
@@ -279,12 +281,26 @@ const uint8_t sentryGun_bitmap[] PROGMEM = {
 
 // ENEMY GOT HIT EMOTE
 const uint8_t enemy_got_hit_emote_bitmap[] PROGMEM = {
-	0b10000001, // *      * 
-	0b01000010, //  *    *
-	0b00100100, //   *  *
-	0b11111111, // ********
-	0b00100100, //   *  *      
-	0b01000010, //  *    *
-	0b10000001, // *      *
+	0b10000010, // *      * 
+	0b01000100, //  *    *
+	0b00101000, //   *  *
+	0b00010000, // ********
+	0b00101000, //   *  *      
+	0b01000100, //  *    *
+	0b10000010, // *      *
 	0b00000000  //
 };
+
+void draw_enemy_hit(bool direction){
+	if (direction == false){
+		draw_8bit_PROGMEM(48, 4, enemy_got_hit_emote_bitmap, COLOR_ORANGE, COLOR_BG);
+	}
+	else {
+		draw_8bit_PROGMEM(72, 4, enemy_got_hit_emote_bitmap, COLOR_ORANGE, COLOR_BG);
+	}
+}
+
+void clear_enemy_hit(){
+	st7735_fill_rect(48, 4, 8, 8, COLOR_BG);
+	st7735_fill_rect(72, 4, 8, 8, COLOR_BG);
+}

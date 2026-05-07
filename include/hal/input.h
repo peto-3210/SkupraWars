@@ -50,6 +50,9 @@ bool input_encoder_button_rising(void);
 // Returns true if rising edge occured (ony once)
 bool input_fire_button_rising(void);
 
+//Reset on push
+bool input_reset_button_rising();
+
 //Call periodically
 void input_tick();
 

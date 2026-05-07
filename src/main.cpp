@@ -14,6 +14,7 @@
 #include <Communication/Datalink.hpp>
 #include <hal/input.h>
 #include <Communication/Messenger.hpp>
+#include <stdio.h>
 
 // Definice barev
 #define COLOR_GREEN		0x07E0
@@ -54,6 +55,9 @@ int main(void) {
 	// ��zení stavů
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
+	extern	uint16_t numberOfShots;
+	extern	uint16_t numberOfHits;
+	extern	uint16_t totalDamage;
 	
 	/*if (Messenger::initTopology(3, 0x0004) == false){
 		Soundboard::playSound(Soundboard::sfx_laser);
@@ -65,6 +69,14 @@ int main(void) {
 
 	while (1) {
 		tick_all();
+
+		if (input_reset_button_rising() == true){
+			current_state = STATE_MENU;
+			state_just_changed = true;
+			numberOfShots = 0;
+			numberOfHits = 0;
+			totalDamage = 0;
+		}
 
 		// HLAVN� STAVOV� AUTOMAT
 		switch (current_state) {
@@ -111,22 +123,43 @@ int main(void) {
 
 			case STATE_DEFEAT: {
 				st7735_fill_screen(COLOR_RED);
-				draw_char_buffer(10, 10, "Umrels!", 0, COLOR_WHITE, COLOR_BG);
-				Soundboard::playMelody(Soundboard::rickRollRiff);
+				draw_char_buffer(10, 20, getName(getSelectedName()), 0, COLOR_WHITE, COLOR_BG);
+				draw_char_buffer(10, 10, "Umrel(a)s!", 0, COLOR_WHITE, COLOR_BG);
+				draw_ship(56, 50, COLOR_MAGENTA);
+
+				char buf[16];
+				snprintf_P(buf, sizeof(buf), PSTR("Zasahy: %u"), numberOfHits);
+				draw_char_buffer(10, 90, buf, 0, COLOR_WHITE, COLOR_BG);
+				snprintf_P(buf, sizeof(buf), PSTR("Vystrely: %u"), numberOfShots);
+				draw_char_buffer(10, 80, buf, 0, COLOR_WHITE, COLOR_BG);
+				Soundboard::playMelody(Soundboard::gameOver);
 				current_state = STATE_DEAD_END;
 				break;
 			}
 
 			case STATE_VICTORY: {
 				st7735_fill_screen(COLOR_GREEN);
-				draw_char_buffer(10, 10, "Vyhrals!", 0, COLOR_WHITE, COLOR_BG);
+				draw_char_buffer(10, 20, getName(getSelectedName()), 0, COLOR_WHITE, COLOR_BG);
+				draw_char_buffer(10, 10, "Vyhral(a)s!", 0, COLOR_WHITE, COLOR_BG);
+				draw_ship(56, 50, COLOR_CYAN);
+
+				char buf[16];
+				snprintf_P(buf, sizeof(buf), PSTR("Zasahy: %u"), numberOfHits);
+				draw_char_buffer(10, 90, buf, 0, COLOR_WHITE, COLOR_BG);
+				snprintf_P(buf, sizeof(buf), PSTR("Vystrely: %u"), numberOfShots);
+				draw_char_buffer(10, 80, buf, 0, COLOR_WHITE, COLOR_BG);
+				//snprintf(buf, sizeof(buf), "Poskozeni: %d", totalDamage);
+				//draw_char_buffer(10, 100, buf, 15, COLOR_WHITE, COLOR_BG);
 				Soundboard::playMelody(Soundboard::grandVictory);
 				current_state = STATE_DEAD_END;
+			}break;
+
+			case STATE_FATAL_ERROR:
+				draw_char_buffer(20, 50, "FATAL ERROR", 0, COLOR_WHITE, COLOR_BG);
 				break;
 
 			case STATE_DEAD_END:
 			break;
-			}
 
 
 		}

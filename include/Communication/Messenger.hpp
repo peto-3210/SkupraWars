@@ -91,7 +91,9 @@ class Messenger {
         "Pending reply buffer full.",
     };
 
+    public:
     static bool initializedTopology;
+    private:
     static const char* errorMsg;
     static receivedMessages messageBuffer;
     static receivedMessages announcementBuffer;

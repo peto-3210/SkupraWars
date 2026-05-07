@@ -83,6 +83,12 @@ SentryGun active_sentries[MAX_SENTRIES];
 PowerUp active_powerups[MAX_POWERUPS];
 static Projectile player_lasers[MAX_PROJECTILES];
 static Projectile enemy_lasers[MAX_PROJECTILES];
+bool enemyHitOn = false;
+bool fire_down = false;
+uint16_t numberOfShots = 0;
+uint16_t numberOfHits = 0;
+uint16_t totalDamage = 0;
+
 
 // Alokace timerů
 static SoftwareTimer* btnTimer = nullptr;
@@ -93,7 +99,7 @@ static SoftwareTimer* rapidFirePUTimer = nullptr;
 static SoftwareTimer* shieldPUTimer = nullptr;
 static SoftwareTimer* powerupSpawnTimer = nullptr;
 static SoftwareTimer* burstTimer = nullptr; 
-static SoftwareTimer* announcementTimer = nullptr;
+static SoftwareTimer* hitEnemyTimer = nullptr;
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -706,6 +712,7 @@ void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 
 			// TADY ODESLAT DATA: Střela se právě narodila, řekneme to protihráči!
             Messenger::sendProjectile(wep, ship_x + 7);
+			numberOfShots++;
 
 			//spawn_enemy_projectile(player_lasers[i].x, wep); //pro testovani, jestli se nepratelske strely vykresli na druhe strane - funguje
 
@@ -774,12 +781,12 @@ void gameplay_init(void) {
 		rapidFirePUTimer = SoftwareTimerPool::acquireTimer();
 		shieldPUTimer = SoftwareTimerPool::acquireTimer();
 		powerupSpawnTimer = SoftwareTimerPool::acquireTimer();
-		announcementTimer = SoftwareTimerPool::acquireTimer();
+		hitEnemyTimer = SoftwareTimerPool::acquireTimer();
 	}
 	
 	burstTimer->startTimerUs(100);
 	fireCooldownTimer->startTimerUs(0);
-	powerupSpawnTimer->startTimerUs(5000000);                                           // Později změnit na 20 sec
+	powerupSpawnTimer->startTimerUs(15000000);                                           // Později změnit na 20 sec
 
 	
     
@@ -812,9 +819,14 @@ void gameplay_init(void) {
 	draw_ship(50, 50, COLOR_ORANGE);
 	draw_char_buffer(10, 10, "Cekani na hrace", 0, COLOR_GREEN, COLOR_BG);
 	if (Messenger::initTopology(2, getSelectedName()) == false){
-		fatalError = true;
-		st7735_fill_screen(COLOR_BG);
-	}; //TODO Skap pri chybe
+		//fatalError = true;
+		//st7735_fill_screen(COLOR_BG);
+		//return;
+		Messenger::initializedTopology = true;
+	} 
+	else {
+		draw_char_buffer(100, SHIP_Y, "INIT", 0, COLOR_GREEN, COLOR_BG);
+	}
 	Soundboard::playMelody(Soundboard::imperialMarch);
     
     st7735_fill_screen(COLOR_BG);
@@ -832,7 +844,7 @@ void gameplay_init(void) {
 GameState gameplay_tick(void) {
 
 	if (fatalError == true){
-		draw_char_buffer(10, 10, "Error", 0, COLOR_RED, COLOR_BG);
+		return STATE_FATAL_ERROR;
 	}
 
 	if (endGame == true){
@@ -864,7 +876,18 @@ GameState gameplay_tick(void) {
 			break;
 		case Messenger::tellHPFun:
 			update_enemy_hp_ui(!direction, p.hp.value);
+			if (p.hp.youHitMe == true){
+				draw_enemy_hit(direction);
+				hitEnemyTimer->startTimerUs(250000);
+				enemyHitOn = true;
+				numberOfHits++;
+				totalDamage += enemy_hp[direction] - p.hp.value;
+			}
 			break;
+	}
+	if (enemyHitOn == true && hitEnemyTimer->isDone()){
+		enemyHitOn = false;
+		clear_enemy_hit();
 	}
 
 	// --- PŘEPÍNÁNÍ ZBRANÍ (enkodérové tlačítko) ---
@@ -878,7 +901,12 @@ GameState gameplay_tick(void) {
 	last_enc_btn = current_enc_btn;
 
 	// --- ČTENÍ TLAČÍTKA STŘELBY (fire button přes HAL) ---
-	bool fire_down = input_fire_button_pressed();
+	if (fire_down == false){
+		fire_down = input_fire_button_rising();
+	}
+	else {
+		fire_down = input_fire_button_pressed();
+	}
 
     switch (btn_state) {
 	    case BTN_IDLE:

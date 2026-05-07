@@ -61,3 +61,5 @@ extern void gameplay_draw_bottom_hud(uint8_t your_health, WeaponType active_weap
 extern void draw_weapon_selection_box(WeaponType wep, uint16_t color);
 extern void gameplay_draw_top_hud_dynamic(uint8_t p1_health, uint8_t p2_health);
 extern void gameplay_draw_top_hud_static(void);
+extern void draw_enemy_hit(bool direction);
+extern void clear_enemy_hit();
