@@ -1,7 +1,8 @@
 #include "hal/input.h"
 
 // --- Encoder state ---
-static volatile int8_t enc_delta = 0;
+//static volatile int8_t enc_delta = 0;
+uint8_t last_enc_A = 0;
 
 // --- Button state (debounced edge detection) ---
 typedef struct {
@@ -9,7 +10,7 @@ typedef struct {
     uint8_t  last_raw;        // last raw read
     uint32_t read_timeout;      // when raw last changed
     bool     pressed;         // state of button
-    bool     rising_edge_announced    //true if function for rising edge reading was called     
+    bool     rising_edge_announced;    //true if function for rising edge reading was called     
 } ButtonStruct;
 
 static ButtonStruct enc_btn = { 0, 0, 0, false, false };
@@ -23,26 +24,54 @@ void input_init(void) {
               (1 << ENC_BTN_PIN) | (1 << BTN2_PIN);
 
     // INT0 on falling edge of encoder A pin
-    EICRA |= (1 << ISC01);    // ISC01=1, ISC00=0 → falling edge
-    EIMSK |= (1 << INT0);     // enable INT0
+    //EICRA |= (1 << ISC01);    // ISC01=1, ISC00=0 → falling edge
+    //EIMSK |= (1 << INT0);     // enable INT0
 }
 
 // Encoder A falling edge — direction determined by B
-ISR(INT0_vect) {
+/*ISR(INT0_vect) {
     if (PIND & (1 << ENC_B_PIN)) {
         enc_delta += (enc_delta <= +MAX_TICKS) ? 1 : 0;   // CCW
     } else {
         enc_delta -= (enc_delta >= -MAX_TICKS) ? 1 : 0;   // CW
     }
-}
+}*/
 
-int8_t input_get_encoder_ticks(void) {
+/*int8_t input_get_encoder_ticks(void) {
     int8_t result = 0;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
         result = enc_delta;
         enc_delta = 0;
     }
+    if (result > 0){
+        return 1;
+    }
+    else if (result < 0){
+        return -1;
+    }
     return result;
+}*/
+
+int8_t input_get_encoder_dir(){
+    uint8_t current_enc_A = (PIND & (1 << PD2)) >> PD2;
+    uint8_t ret_val = 0;
+
+    if (current_enc_A != last_enc_A) {
+        if (current_enc_A == 0) {
+            uint8_t current_enc_B = (PIND & (1 << PD3)) >> PD3;
+            
+            if (current_enc_B != current_enc_A) {
+                // Scroll up
+                ret_val = -1;
+                
+            } else {
+                // Scroll down
+                ret_val = 1;
+            }
+        }
+        last_enc_A = current_enc_A;
+    }
+    return ret_val;
 }
 
 // Generic debounce + edge detection helper

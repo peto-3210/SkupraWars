@@ -109,7 +109,7 @@ class Soundboard {
     Soundboard& operator=(const Soundboard&) = delete;
 
     static SoftwareTimer* toneTimer;
-    static bool isPlaying;
+    static bool enabled;
 
     static Sound4* currentSound;
     static Melody* currentMelody;
@@ -151,7 +151,7 @@ class Soundboard {
      */
     static void playSound(sounds s){
         currentSound = &(soundList[s]);
-        isPlaying = true;
+        enabled = true;
     }
 
     /**
@@ -161,21 +161,21 @@ class Soundboard {
      */
     static void playMelody(melodies m){
         currentMelody = &(melodyList[m]);
-        isPlaying = true;
+        enabled = true;
     }
 
-	static bool isSoundPlaying() {
-		return isPlaying; 
+	static bool isPlaying() {
+		return enabled == true && (currentMelody != nullptr || currentSound != nullptr); 
 	}
 
     // Pauses playback.
     static void pause(){
-        isPlaying = false;
+        enabled = false;
     };
 
     // Resumes playback.
     static void resume(){
-        isPlaying = true;
+        enabled = true;
     };
 
 	// Plays the current sound or melody, should be called in a loop.

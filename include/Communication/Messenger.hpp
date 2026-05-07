@@ -6,10 +6,11 @@
 
 using recvPacketState = Datalink::recvPacketState;
 using Packet = Datalink::Packet;
+using packetPayload = Datalink::packetPayload;
 class Messenger {
     
     private:
-    static const uint8_t MAX_NEIGHBOURS = 8;
+    static const uint8_t MAX_NEIGHBOURS = 7;
     static const uint8_t RECEIVED_MESSAGES_BUFFER_SIZE = 8;
     static const uint8_t PENDING_REPLY_BUFFER_SIZE = 4;
     static const uint32_t REPLY_TIMEOUT_US = 10000;
@@ -19,20 +20,27 @@ class Messenger {
         announceFun,
         shootProjectileFun,
         tellHPFun,
-        reservedFun
+        tellPositionFun
     };
 
+    /*
+     Announcement payload compositions:
+     
+     topologyInitAnn:   NUMBER OF PARTICIPANTS (3 bits) | PARTICIPANT ID (3 bits)
+     deathAnn:          KILLER ID (3 bits) | VICTIM ID (3 bits)
+     debufAnn:          AUTHOR ID (3 bits) | DEBUF TYPE (3 bits)
+    */
     enum announcementType{
         topologyInitAnn,
+        deathAnn,
+        debufAnn,
         songSyncAnn,
-        positionAnn,
-        specialAnn,
     };
 
     struct receivedMessages{
         Packet messages[RECEIVED_MESSAGES_BUFFER_SIZE];
         uint8_t messageNum;
-        uint8_t messageIterator;
+        uint8_t messageReadIterator;
 
         bool addMessage(Packet p){
             if (messageNum == RECEIVED_MESSAGES_BUFFER_SIZE){
@@ -46,16 +54,16 @@ class Messenger {
             if (messageNum == 0){
                 return (Packet){};
             }
-            Packet p = messages[messageIterator++];
-            if (messageIterator == messageNum){
-                messageIterator = 0;
+            Packet p = messages[messageReadIterator++];
+            if (messageReadIterator >= messageNum){
+                messageReadIterator = 0;
                 messageNum = 0;
             }
             return p;
         }
 
         uint8_t getMessageNum(){
-            return messageNum;
+            return messageNum - messageReadIterator;
         }
     };
     
@@ -83,14 +91,16 @@ class Messenger {
     static bool initialized;
     static const char* errorMsg;
     static receivedMessages messageBuffer;
+    static receivedMessages announcementBuffer;
 
     static bool replying;
     static replyBufferEntry pendingReplyBuffer[PENDING_REPLY_BUFFER_SIZE];
     static uint8_t pendingReplyNumber;
 
+    static uint8_t myId;
     static uint8_t neighbourNum;
-    static uint8_t neighbours[MAX_NEIGHBOURS -1];
-    static bool neighbourActive[MAX_NEIGHBOURS -1];
+    static uint8_t neighbours[MAX_NEIGHBOURS];
+    static bool neighbourActive[MAX_NEIGHBOURS];
 
 
     /**
@@ -121,12 +131,28 @@ class Messenger {
     }
 
     /**
+     * @brief Finds closest neighbour in specified direction
+     * 
+     * @param direction true for default, false for reverse
+     * @param id Fills in ID of neighbour
+     * @return Distance of neighbour (always in default direction), or MAX_NEIGHBOURS if no neighbour is active
+     */
+    static uint8_t findNeighbour(bool direction, uint8_t* id = nullptr);
+
+    /**
      * @brief sends message to the neighbour
      * 
      * @param packet packet to send
      * @param direction true for packet sent in direction of participant with distance 0, false for opposite direction
      */
     static bool sendToNeighbour(Packet& packet, bool direction);
+        
+    /**
+     * @brief Sends announcement packet, setting the distance to reach everyone in topology
+     * 
+     * @param packet Packet to send
+     */
+    static bool sendAnnouncement(Packet& packet);
 
 
     public:
@@ -170,11 +196,25 @@ class Messenger {
     static bool sendHP(uint8_t hp, uint8_t position);
 
     /**
-     * @brief Receives and forwards packets
+     * @brief Retrieves single packet from messageBuffer
+     * 
+     * @param packet Packet that will be filled with data
+     * @return Function code, or 0 if no packet is available
      */
-    static void commLoop(){
-        recvMessages();
-    }
+    static uint8_t getPacket(packetPayload& p);
+
+    /**
+     * @brief Retrieves single packet from announcementBuffer
+     * 
+     * @param packet Packet that will be filled with data
+     * @return True if packet is available, false otherwise
+     */
+    static bool getAnnouncement(packetPayload& p);
+
+    /**
+     * @brief Receives and forwards packets, should be called in loop
+     */
+    static void commLoop();
 };
 
 

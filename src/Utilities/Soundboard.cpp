@@ -2,7 +2,7 @@
 #include "Utilities/SoftwareTimer.hpp"
 
 SoftwareTimer* Soundboard::toneTimer = nullptr;
-bool Soundboard::isPlaying = false;
+bool Soundboard::enabled = false;
 
 Sound4* Soundboard::currentSound = nullptr;
 Melody* Soundboard::currentMelody = nullptr;
@@ -16,7 +16,7 @@ void Soundboard::initSoundboard(){
 
 void Soundboard::play(){
     //Stop playing
-    if (isPlaying == false){
+    if (isPlaying() == false){
         toneTimer->stop();
         currentRecord = {};
     }
@@ -31,7 +31,6 @@ void Soundboard::play(){
             //Sound finished
             if (currentRecord.isNull()){
                 currentSound = nullptr;
-                isPlaying = false;
             }
 
             //Start next tone
@@ -52,7 +51,6 @@ void Soundboard::play(){
             //Melody finished
             if (currentRecord.isNull()){
                 currentMelody = nullptr;
-                isPlaying = false;
             }
 
             //Start next tone

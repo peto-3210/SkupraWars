@@ -12,8 +12,11 @@ class Datalink {
 
     Possible announcement types:
     - Topology initialization: Payload is self-identification payload, which can be used to identify nodes
+    - Death announcement: Payload is the ID of my killer and mine
     - Song synchronization: Payload is the current position in the song, which can be used to synchronize music playback
     - Projectile hit: Payload is the position of the hit
+
+    ALL ANNOUNCEMENTS ARE BROADCASTS - THEY ARE RECEIVED BY EVERY DEVICE REGARDLESS OF DISTACE
     */
     union announcePayload{
         uint8_t rawData;
@@ -45,7 +48,7 @@ class Datalink {
     union hpPayload{
         uint8_t rawData;
         struct {
-            uint8_t hp          :7;
+            uint8_t value          :7;
             uint8_t youHitMe    :1;
         };
     };
@@ -58,6 +61,13 @@ class Datalink {
         };
     };
 
+    union packetPayload {
+        uint8_t rawPayload;
+        announcePayload announcement;
+        projectilePayload projectile;
+        hpPayload hp;
+    };
+
     /**
      * @brief Union representing a data packet:
      * 
@@ -65,16 +75,17 @@ class Datalink {
      * 
      * Header:
      * 
-     * | FUNCTION (2 bits) | BROADCAST (1 bit) | REPLY (1 bit) | DIRECTION (1 bit) | DISTANCE (3 bits)
+     * |  DISTANCE (3 bits) | REPLY (1 bit) | DUMMY (1 bit)  | DIRECTION (1 bit) | FUNCTION (2 bits) 
      * 
-     * @param FUNCTION Function code of the packet, which determines how the payload should be interpreted
-     * @param BROADCAST: Whether the packet is broadcast - for all users
+     * @param DISTANCE: Distance to the sender of the packet. 0 means packet from participant with distance 0 (next one in default direction), etc.
      * @param REPLY: Whether the packet is a reply to a previous packet. Reply packets are sent in response to received packets when replying is on, 
      * and have the same function code and payload as the original packet.
+     * @param DUMMY: Not implemented
      * @param DIRECTION: Direction of the packet, which determines the direction in which the packet is sent and received. 
      * 0 for packet sent in direction of participant with distance 1, 0 for opposite direction.
      * POSITIVE AND DEFAULT DIRECTION IS CLOCKWISE!
-     * @param DISTANCE: Distance to the sender of the packet. Highest number (7) means broadcast message, 0 means packet from participant with distance 0, etc.
+     * @param FUNCTION Function code of the packet, which determines how the payload should be interpreted
+     
      * @param PAYLOAD: The payload of the packet, which contains the actual data being transmitted.
      * 
      * @note Only Function and Payload are useful for gameplay logic, the rest is communication-specific
@@ -85,17 +96,12 @@ class Datalink {
         uint8_t rawPacket[2];
         struct {
             uint8_t distance    :3; 
-            uint8_t broadcast   :1; // true if packet is broadcast
             uint8_t reply       :1; // true in case of reply packet
+            uint8_t dummy       :1;
             uint8_t direction   :1; // 1 for packet sent in default direction, 1 for opposite direction
             uint8_t function    :2;
-            
-            union {
-                uint8_t rawPayload;
-                announcePayload announcement;
-                projectilePayload projectile;
-                hpPayload hp;
-            };
+
+            packetPayload payload;
 
         };
         Packet() = default;
@@ -104,6 +110,7 @@ class Datalink {
     enum recvPacketState{
         noPacket,
         packetReceived,
+        announcementReceived,
         packetForOtherParticipant,
         //packetError,
     };
@@ -118,12 +125,10 @@ class Datalink {
 
     typedef enum {
         sendBufferFull,
-        crcError,
     } commError;
 
     static constexpr const char* errorMessages[] = {
         "Send buffer full.",
-        "CRC error in message."
     };
 
     static const uint8_t PACKET_LENGTH = 2;
@@ -160,7 +165,6 @@ class Datalink {
     
     /**
      * @brief Receives packet through physical interface.
-     * The first 3 bits represent address, 4-th bit is for broadcast
      * 
      * @return Receied packt state.
      */

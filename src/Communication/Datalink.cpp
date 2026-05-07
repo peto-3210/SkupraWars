@@ -1,7 +1,8 @@
 #include "Communication/Datalink.hpp"
 
-bool Datalink::initialized = false;
+static const uint8_t ANNOUNCEMENT_FUNC = 0;
 
+bool Datalink::initialized = false;
 const char* Datalink::errorMsg = nullptr;
 
 //Maxim-DOW CRC-8 precalculated values
@@ -89,7 +90,7 @@ Datalink::recvPacketState Datalink::recvPacket(Packet& packet){
 	uart_recv(datalinkPacket, DATALINK_PACKET_LENGTH);
 
 	if (calculateCRC(datalinkPacket, true) == false){
-		setError(crcError);
+		//setError(crcError);
 		//return packetError; // igrnore
 		return noPacket;
 	}
@@ -106,12 +107,14 @@ Datalink::recvPacketState Datalink::recvPacket(Packet& packet){
 		memcpy(forwardPacket.rawPacket, packet.rawPacket, PACKET_LENGTH);
 		forwardPacket.distance--;
 		if (sendPacket(forwardPacket) == false){
-			//return packetError; // igrnore
+			//return packetError; // ignore
 		}
 
-		if (packet.broadcast == true){
-			return packetReceived;
+		//Packet is announcement (announcements are broadcasts)
+		if (packet.function == ANNOUNCEMENT_FUNC){
+			return announcementReceived;
 		}
+
 		return packetForOtherParticipant;
 	}
 }

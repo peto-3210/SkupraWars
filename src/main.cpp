@@ -55,7 +55,12 @@ int main(void) {
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
 	
-	// Soundboard
+	/*if (Messenger::initTopology(3, 0x0004) == false){
+		Soundboard::playSound(Soundboard::sfx_laser);
+	}
+	else {
+		Soundboard::playSound(Soundboard::sfx_rocket);
+	}*/
 	
 
 	while (1) {

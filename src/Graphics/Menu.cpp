@@ -9,6 +9,7 @@
 
 // --- NASTAVENÍ POLOŽEK MENU ---
 #define NUM_ITEMS 3
+#define MAX_PLAYERS 8
 
 const char* MENU_ITEMS[NUM_ITEMS] = {
     "PRIPOJIT",
@@ -16,8 +17,37 @@ const char* MENU_ITEMS[NUM_ITEMS] = {
     "SKORE"
 };
 
+enum menuItems{
+    START_GAME,
+    SHOW_ARSENAL,
+    SHOW_SCORE
+};
+
+enum menuStates{
+    INIT_MENU,
+    SELECT_PLAYER_NUM,
+    SELECT_NAME,
+};
+
 // --- LOKÁLNÍ PROMĚNNÉ ---
 static uint8_t selected_item = 0; // Která položka je právě vybraná
+
+uint8_t player_name = 0;
+uint8_t player_num = 0;
+uint8_t getSelectedName(){return player_name;}
+uint8_t getSelectedPlayerNum(){return player_num;}
+
+menuStates menu_state = INIT_MENU;
+const char* names[] = {
+    "Abuk   ",
+    "Sevak  ",
+    "Ronda  ",
+    "Amir   ",
+    "Etera  ",
+    "Lahemia",
+    "Naftra ",
+    "Nazked "
+};
 
 // Funkce pro kompletní (nebo částečné) překreslení menu
 static void draw_menu() {
@@ -40,6 +70,7 @@ static void draw_menu() {
     }
 }
 
+
 void menu_init(void) {
     selected_item = 0;
     
@@ -49,30 +80,93 @@ void menu_init(void) {
 
 
 GameState menu_tick(void) {
-    // --- 1. ČTENÍ ENKODÉRU (SCROLLOVÁNÍ) ---
-    int8_t ticks = input_get_encoder_ticks();
-    if (ticks < 0) {
-        // Scrollování dolů
-        if (selected_item < NUM_ITEMS - 1) {
-            selected_item++;
-            draw_menu();
-        }
-    } else if (ticks > 0) {
-        // Scrollování nahoru
-        if (selected_item > 0) {
-            selected_item--;
-            draw_menu();
-        }
-    }
-    
-    // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
-    if (input_encoder_button_rising() == true){
-        switch (selected_item){
-            case START_GAME:
+int8_t scroll_dir = input_get_encoder_dir();
+    switch (menu_state){
+        case INIT_MENU:
+            if (scroll_dir < 0) {
+                // Scrollování nahoru
+                if (selected_item > 0) {
+                    selected_item--;
+                    draw_menu(); // Překreslíme změnu
+                }
+            } else if (scroll_dir > 0){
+                // Scrollování dolů
+                if (selected_item < NUM_ITEMS - 1) {
+                    selected_item++;
+                    draw_menu(); // Překreslíme změnu
+                }
+            }
+            
+            // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
+            if (input_encoder_button_rising() == true){
+                switch (selected_item){
+                    case START_GAME:
+                        st7735_fill_screen(COLOR_WHITE);
+                        draw_char_buffer(10, 10, "Vyber pocet hracu", 0, 0xF800, 0xFFFF); 
+                        draw_dotted_rect(60, 50, 7, 9, COLOR_RED);
+                        selected_item = 2;
+                        menu_state = SELECT_PLAYER_NUM;
+                        break;
+                }
+            }
+            break;
+
+
+        case SELECT_PLAYER_NUM:
+            if (scroll_dir < 0) {
+                // Scrollování nahoru
+                if (selected_item > 2) {
+                    selected_item--;
+                    char c = selected_item + 48;
+                    draw_char_buffer(61, 51, &c, 1, COLOR_BG, COLOR_WHITE);
+                }
+            } else if (scroll_dir > 0){
+                // Scrollování dolů
+                if (selected_item < MAX_PLAYERS - 1) {
+                    selected_item++;
+                    char c = selected_item + 48;
+                    draw_char_buffer(61, 51, &c, 1, COLOR_BG, COLOR_WHITE);
+                }
+            }
+            
+            // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
+            if (input_encoder_button_rising() == true){
+                st7735_fill_screen(COLOR_WHITE);
+                draw_char_buffer(20, 10, "Vyber si jmeno", 0, 0xF800, 0xFFFF); 
+                player_num = selected_item;
+                menu_state = SELECT_NAME;
+            }
+            break;
+
+
+        case SELECT_NAME:
+            if (scroll_dir < 0) {
+                // Scrollování nahoru
+                if (selected_item > 0) {
+                    selected_item--;
+                    draw_char_buffer(50, 50, names[selected_item], 0, 0xF800, 0xFFFF);
+                }
+            } else if (scroll_dir > 0){
+                // Scrollování dolů
+                if (selected_item < MAX_PLAYERS - 1) {
+                    selected_item++;
+                    draw_char_buffer(50, 50, names[selected_item], 0, 0xF800, 0xFFFF);
+                }
+            }
+            
+            // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
+            if (input_encoder_button_rising() == true){
+                player_name = selected_item;
+                st7735_fill_screen(COLOR_WHITE);
                 return STATE_GAMEPLAY;
-                break;
-        }
+                
+            }
+            break;
+
+
+
+        
+
     }
-    
-    return STATE_MENU;
+        return STATE_MENU;
 }

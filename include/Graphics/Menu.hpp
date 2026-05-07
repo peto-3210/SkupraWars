@@ -6,11 +6,8 @@
 // Inicializuje menu
 void menu_init(void);
 
-enum menuItems{
-    START_GAME,
-    SHOW_ARSENAL,
-    SHOW_SCORE
-};
-
 // Stará se o scrollování a výběr
 GameState menu_tick(void);
+
+uint8_t getSelectedName();
+uint8_t getSelectedPlayerNum();

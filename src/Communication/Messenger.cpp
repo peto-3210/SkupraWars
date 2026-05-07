@@ -4,13 +4,15 @@ bool Messenger::initialized = false;
 bool Messenger::replying = false;
 const char* Messenger::errorMsg = nullptr;
 Messenger::receivedMessages Messenger::messageBuffer = {};
+Messenger::receivedMessages Messenger::announcementBuffer = {};
 
 Messenger::replyBufferEntry Messenger::pendingReplyBuffer[PENDING_REPLY_BUFFER_SIZE] = {};
 uint8_t Messenger::pendingReplyNumber = 0;
 
+uint8_t Messenger::myId = 0;
 uint8_t Messenger::neighbourNum = 0;
-uint8_t Messenger::neighbours[MAX_NEIGHBOURS - 1] = {};
-bool Messenger::neighbourActive[MAX_NEIGHBOURS - 1] = {};
+uint8_t Messenger::neighbours[MAX_NEIGHBOURS] = {};
+bool Messenger::neighbourActive[MAX_NEIGHBOURS] = {};
 
 
 bool Messenger::sendMessage(Packet& packet){
@@ -79,7 +81,7 @@ bool Messenger::recvMessages(bool promiscuousMode){
                     }
 
                     //Received regular packet, send reply
-                    else if (packet.broadcast == false) {
+                    else if (packet.announcement == false) {
                         messageBuffer.addMessage(packet);
 
                         packet.reply = true;
@@ -108,10 +110,15 @@ bool Messenger::recvMessages(bool promiscuousMode){
                 messageBuffer.addMessage(packet);
                 break;
 
+            case recvPacketState::announcementReceived:
+                announcementBuffer.addMessage(packet);
+                break;
+
             case recvPacketState::packetForOtherParticipant:
                 if (promiscuousMode == true){
                     messageBuffer.addMessage(packet);
                 }
+                break;
 
             default: break;
         }
@@ -121,14 +128,14 @@ bool Messenger::recvMessages(bool promiscuousMode){
 
 
 
-bool Messenger::initTopology(uint8_t nodeNum, uint8_t myId, bool requireReply){
+bool Messenger::initTopology(uint8_t nodeNum, uint8_t self, bool requireReply){
 	neighbourNum = nodeNum - 1;
+    myId = self;
 	Packet packet = {0};
     packet.distance = 7;
     packet.function = announceFun;
     packet.direction = true;
-    packet.broadcast = true;
-    packet.announcement.payload = (neighbourNum << 3) | myId;
+    packet.payload.announcement.payload = (neighbourNum << 3) | myId;
     uart_flush_rx();
 
 	if (sendMessage(packet) == false){
@@ -142,7 +149,7 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t myId, bool requireReply){
 	while (receivedNum < neighbourNum){
 		recvMessages();
 
-        if (messageBuffer.getMessageNum() == 0){
+        if (announcementBuffer.getMessageNum() == 0){
             SoftwareTimerPool::busyWaitUs(1000);
 			retryNum++;
 			if (retryNum > 1000000){
@@ -152,14 +159,14 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t myId, bool requireReply){
         }
 
         else {
-            Packet ann = messageBuffer.getMessage();
-            if (ann.function == announceFun && ann.broadcast == true && 
-                ann.announcement.type == topologyInitAnn){
-                neighbours[receivedNum] = ann.announcement.payload & 0b111;
+            Packet ann = announcementBuffer.getMessage();
+            if (ann.function == announceFun &&
+                ann.payload.announcement.type == topologyInitAnn){
+                neighbours[receivedNum] = ann.payload.announcement.payload & 0b111;
                 neighbourActive[receivedNum] = true;
 
                 //Check for duplicit identification (including myself) and correct participant num
-                if (myId == neighbours[receivedNum] || (ann.announcement.payload >> 3) != neighbourNum){
+                if (myId == neighbours[receivedNum] || (ann.payload.announcement.payload >> 3) != neighbourNum){
                         setError(multipleIdentification);
                         return false;
                     }
@@ -174,7 +181,7 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t myId, bool requireReply){
         }
 	}
 
-	while (messageBuffer.getMessageNum() == 0){
+	while (announcementBuffer.getMessageNum() == 0){
         recvMessages();
         SoftwareTimerPool::busyWaitUs(1000);
         retryNum++;
@@ -184,16 +191,47 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t myId, bool requireReply){
         }
     }
 
-    packet = messageBuffer.getMessage();
+    packet = announcementBuffer.getMessage();
     //Received own packet - set replying and return true
-	if (packet.function == announceFun && packet.broadcast == true &&
-		packet.announcement.type == topologyInitAnn && 
-        packet.announcement.payload == ((neighbourNum << 3) | myId)){
+	if (packet.function == announceFun &&
+		packet.payload.announcement.type == topologyInitAnn && 
+        packet.payload.announcement.payload == ((neighbourNum << 3) | myId)){
             replying = requireReply;
 			return true;
 		}
 	setError(ringNotClosed);
 	return false;
+}
+
+uint8_t Messenger::findNeighbour(bool direction, uint8_t* id){
+    uint8_t iterator;
+
+    //Find the next active neighbour forwards
+    if (direction == true){
+        iterator = 0;
+        while (iterator < neighbourNum && neighbourActive[iterator] == false){
+            ++iterator;
+        }
+        if (iterator == neighbourNum){
+            return MAX_NEIGHBOURS;
+        }
+    }
+
+    //Find the next active neighbour backwards
+    else {
+        iterator = neighbourNum - 1;
+        while (iterator > 0 && neighbourActive[iterator] == false){
+            --iterator;
+        }
+        if (iterator == 0 && neighbourActive[iterator] == false){
+            return MAX_NEIGHBOURS;
+        }
+    }
+
+    if (id != nullptr){
+        *id = neighbours[iterator];
+    }
+    return iterator;
 }
 
 void Messenger::disableNeighbour(uint8_t neighbourId){
@@ -206,30 +244,12 @@ void Messenger::disableNeighbour(uint8_t neighbourId){
 
 bool Messenger::sendToNeighbour(Packet& packet, bool direction){
     packet.direction = direction;
-    uint8_t iterator;
-    //Find the next active neighbour backwards
-    if (direction == false){
-        iterator = 0;
-        while (iterator < neighbourNum && neighbourActive[iterator] == false){
-            ++iterator;
-        }
-        if (iterator == neighbourNum){
-            return false;
-        }
-    }
+    packet.distance = findNeighbour(direction);
+    return sendMessage(packet);
+}
 
-    //Find the next active neighbour forwards
-    else {
-        iterator = neighbourNum - 1;
-        while (iterator > 0 && neighbourActive[iterator] == false){
-            --iterator;
-        }
-        if (iterator == 0 && neighbourActive[iterator] == false){
-            return false;
-        }
-    }
-
-    packet.distance = neighbourNum - 1 - iterator;
+bool Messenger::sendAnnouncement(Packet& packet){
+    packet.distance = neighbourNum - 1;
     return sendMessage(packet);
 }
 
@@ -238,21 +258,54 @@ bool Messenger::sendProjectile(WeaponType projectile, uint8_t position){
     bool direction = position < HALF_SCREEN_LENGTH;
 
     p.function = shootProjectileFun;
-    p.projectile.type = projectile;
-    p.projectile.position = position;
+    p.payload.projectile.type = projectile;
+    p.payload.projectile.position = position;
     return sendToNeighbour(p, direction);
 }
 
 bool Messenger::sendHP(uint8_t hp, uint8_t position){
     Packet p = {0};
     p.function = tellHPFun;
-    p.hp.hp = hp;
+    p.payload.hp.value = hp;
 
-    p.hp.youHitMe = position < HALF_SCREEN_LENGTH;
+    //Anounce death
+    if (hp == 0){
+        p.function = announceFun;
+        p.payload.announcement.type = deathAnn;
+        uint8_t id = 0;
+        findNeighbour(true, &id);
+        p.payload.announcement.payload = (id << 3) | myId;
+        return sendAnnouncement(p);
+    }
+
+    p.payload.hp.youHitMe = position < HALF_SCREEN_LENGTH;
     if (sendToNeighbour(p, true) == false){
         return false;
     }
-
-    p.hp.youHitMe = !p.hp.youHitMe;
+    
+    SoftwareTimerPool::busyWaitUs(1000);
+    p.payload.hp.youHitMe = !p.payload.hp.youHitMe;
     return sendToNeighbour(p, false);
+}
+
+uint8_t Messenger::getPacket(packetPayload& payload){
+    if (messageBuffer.getMessageNum() == 0){
+        return 0;
+    }
+    Packet newPacket = messageBuffer.getMessage();
+    payload = newPacket.payload;
+    return newPacket.function;
+}
+
+bool Messenger::getAnnouncement(packetPayload& payload){
+    if (announcementBuffer.getMessageNum() == 0){
+        return false;
+    }
+    Packet newPacket = announcementBuffer.getMessage();
+    payload = newPacket.payload;
+    return true;
+}
+
+void Messenger::commLoop(){
+    recvMessages();
 }

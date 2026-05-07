@@ -22,12 +22,14 @@ extern "C" {
 #define CONSTANT_READ_NUM 2
 
 //Max number of encoder ticks
-#define MAX_TICKS 1
+//#define MAX_TICKS 127
 
 void input_init(void);
 
 // Returns direction since last call, then resets to ENC_NONE
-int8_t input_get_encoder_ticks(void);
+//int8_t input_get_encoder_ticks(void); DO NOT USE!!!
+// Returns direction of encoder. The values are scanned only when this function is called
+int8_t input_get_encoder_dir();
 
 // Returns current_button_state
 bool input_encoder_button_pressed(void);

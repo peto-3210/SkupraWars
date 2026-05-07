@@ -4,10 +4,16 @@
 #include "Utilities/Soundboard.hpp"
 #include "Utilities/SoftwareTimer.hpp"
 #include "Communication/Messenger.hpp"
+#include "Graphics/Menu.hpp"
 #include "hal/st7735.h"
 #include "hal/input.h"
+#include "hal/libraries.h"
+#include <stdio.h>
 #include <avr/io.h>
 #include <stdlib.h>
+
+#define DISPLAY_LENGTH 160
+#define DISPLAY_WIDTH 128
 
 // Definice HUD regionů 
 #define TOP_HUD_Y_START 0
@@ -59,17 +65,19 @@ bool isShieldActive;
 bool isRapidFireActive; 
 WeaponType current_weapon;
 static ButtonState btn_state;
+static bool last_enc_btn = false; // Pro detekci hrany enkodérového tlačítka
 uint8_t inventory_count;
 static uint8_t x; // Pozice lodě
-static const uint8_t SHIP_Y = ST7735_HEIGHT - 36;
+static const uint8_t SHIP_Y = DISPLAY_LENGTH - 36;
 uint8_t burst_shots_left;
-static uint8_t player_hp = 99;
-static uint8_t enemy_hp = 99;
+static uint8_t last_A;
+static uint8_t player_hp = 0;
+static uint8_t enemy_hp[2] = {0, 0}; // [0] je levý, [1] je pravý
 
 PowerUpType player_inventory[MAX_INVENTORY];
 SentryGun active_sentries[MAX_SENTRIES];
 PowerUp active_powerups[MAX_POWERUPS];
-static Projectile player_projectiles[MAX_PROJECTILES];
+static Projectile player_lasers[MAX_PROJECTILES];
 static Projectile enemy_lasers[MAX_PROJECTILES];
 
 // Alokace timerů
@@ -81,8 +89,6 @@ static SoftwareTimer* rapidFirePUTimer = nullptr;
 static SoftwareTimer* shieldPUTimer = nullptr;
 static SoftwareTimer* powerupSpawnTimer = nullptr;
 static SoftwareTimer* burstTimer = nullptr; 
-
-void spawn_enemy_projectile(uint8_t received_x, WeaponType wep_type);
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -324,6 +330,32 @@ bool check_powerup_collisions(Projectile& p) {
 	return false; // Projektil nic netrefil, letí dál
 }
 
+/************************* update_player_hp_ui *************************/
+void update_player_hp_ui(uint8_t hp) {
+    char hp_str[4];
+    // "%02d" zaručí, že číslo bude mít vždy 2 znaky (např. "05", "99")
+    sprintf(hp_str, "%02d", hp); 
+
+    // Vykreslíme text "hp_str". 
+    // Délka je 2 (protože máme 2 číslice).
+    draw_char_buffer(18, BOT_HUD_Y_START + 6, hp_str, 2, COLOR_RED, COLOR_BG);
+}
+
+/************************* update_enemy_hp_ui *************************/
+void update_enemy_hp_ui(uint8_t enemy_index, uint8_t hp) {
+    char hp_str[4];
+    sprintf(hp_str, "%02d", hp);
+
+    // Výpočet souřadnice X podle indexu nepřítele:
+    // Pokud je to levý nepřítel (0), X bude 18 (levý okraj).
+    // Pokud je to pravý nepřítel (1), X bude např. 115 (pravý okraj).
+    // (Tyto hodnoty 4 a 110 si uprav podle toho, kam to přesně chceš nakreslit)
+    int x_pos = (enemy_index == 0) ? 18 : 100;
+	uint16_t color = (enemy_index == 0) ? COLOR_GREEN : COLOR_BLUE;
+
+    draw_char_buffer(x_pos, TOP_HUD_Y_START + 4, hp_str, 2, color, COLOR_BG);
+}
+
 /************************* check_player_collision *************************/
 // Vrátí true, pokud nepřátelská střela trefila naši loď
 bool check_player_collision(Projectile& p) {
@@ -334,38 +366,54 @@ bool check_player_collision(Projectile& p) {
 		pw = 3; ph = 8;
 	} else if (p.type == WEP_LASER) {
 		px = p.x - 1; pw = 2;
-		py = 16; ph = SHIP_Y - 16;
+		py = 16; ph = SHIP_Y;
 	} else {
 		pw = 1; ph = LASER_LENGTH;
 		py = p.y;
 	}
 
-    // Štít: Pokud je štít aktivní, loď je nezranitelná, ale střelu zničíme
+    // Štít: Pokud je štít aktivní, loď je nezranitelná...
 	if (check_collision(px, py, pw, ph, x, SHIP_Y, SHIP_LENGTH, SHIP_LENGTH)) {
 		
-        if (isShieldActive) {
-            // Štít střelu vyruší, zrušíme štít
-            isShieldActive = false;
-            draw_ship(x, SHIP_Y, COLOR_BLUE);
-        } else {
-            // ZÁSAH DO LODĚ BEZ ŠTÍTU!
-            uint8_t dmg = get_weapon_damage(p.type);
-            
-            // Ošetření podtečení HP
-            if (player_hp > dmg) {
-                player_hp -= dmg;
-            } else {
-                player_hp = 0; 
-                // ZDE BUDE KONEC HRY (SMRT)
-            }
-            
-            
-            // Překreslíme náš dolní panel
-            //update_player_hp_ui(player_hp);
-            
-            // --- Odeslání mého nového HP přes UART ---
-            Messenger::sendHP(player_hp, x);
-        }
+		// ZÁSAH DO LODĚ BEZ ŠTÍTU!
+		if (!isShieldActive) {
+			
+			// --- TICK TIMER (I-FRAMES) ---
+			// Tato proměnná se vytvoří jen jednou a pamatuje si čas napořád
+			static uint32_t last_damage_time = 0;
+			
+			// Může hráč dostat poškození? (Základně ano)
+			bool can_take_damage = true;
+			
+			// Pokud je to laser, zkontrolujeme, jestli od posledního zranění uběhlo alespoň 100 ms
+			if (p.type == WEP_LASER) {
+				if (micros() - last_damage_time < 70000UL) {
+					can_take_damage = false; // Ještě neuběhlo půl vteřiny, poškození ignorujeme
+				}
+			}
+			
+			// Pokud je poškození povoleno, odečteme životy a zresetujeme časovač
+			if (can_take_damage) {
+				last_damage_time = micros(); // Uložíme čas tohoto zásahu
+				
+				uint8_t dmg = get_weapon_damage(p.type);          
+				// Ošetření podtečení HP
+				if (player_hp > dmg) {
+					player_hp -= dmg;
+				} else {
+					player_hp = 0; 
+					// ZDE BUDE KONEC HRY (SMRT)
+				}
+				// Překreslíme náš dolní panel
+				update_player_hp_ui(player_hp);				
+				// Přehrajeme zvuk zásahu
+				Soundboard::playSound(Soundboard::sfx_hit_enemy);
+			}
+		}
+
+		// --- Odeslání mého nového HP přes UART ---
+		Messenger::sendHP(player_hp, x);
+        
 
 		// Pohlcení projektilu (stejně jako u powerupů, laser nepolykáme)
 		if (p.type != WEP_LASER) {
@@ -384,13 +432,68 @@ bool check_player_collision(Projectile& p) {
 }
 
 /************************* on_enemy_hp_received *************************/
-// Tuto funkci volá modul UART, když protihráč nahlásí změnu svých životů
-void on_enemy_hp_received(uint8_t new_hp) {
-    enemy_hp = new_hp;
-    //update_enemy_hp_ui(enemy_hp); // Překreslíme horní HUD
+void apply_enemy_hp_update(uint8_t enemy_index, uint8_t new_hp) {
+    // enemy_index: 0 = levý, 1 = pravý
+    // Uložíme nové HP správnému nepříteli do našeho pole
+    enemy_hp[enemy_index] = new_hp;
     
-    if (enemy_hp == 0) {
-        // ZDE BUDE KONEC HRY (VÝHRA!)
+    // Překreslíme ho na displeji
+    update_enemy_hp_ui(enemy_index, new_hp);
+    
+    if (enemy_hp[enemy_index] == 0) {
+        // ZDE BUDE KÓD PRO SMRT DANÉHO NEPŘÍTELE
+        // Např. mu tam můžeš nakreslit explozi nebo "00" a zneaktivnit jeho stranu
+    }
+}
+
+/************************* safe_draw_pixel *************************/
+// Bezpečné vykreslení pixelu (pokud padne do inventáře, zahodí se)
+void safe_draw_pixel(int x, int y, uint16_t color) {
+    // Pokud jsme v inventáři, nekreslíme (okamžitě ukončíme funkci)
+    if (x <= 13 && y >= 77 && y <= 111) {
+        return; 
+    }
+    st7735_draw_pixel(x, y, color);
+}
+
+/************************* safe_fill_rect *************************/
+// Bezpečné vykreslení obdélníku (pro rakety a kontinuální lasery)
+void safe_fill_rect(int x, int y, int w, int h, uint16_t color) {
+    // Pokud je obdélník mimo zakázanou X zónu, vykreslíme ho rovnou celý (rychlé)
+    if (x > 13) {
+        st7735_fill_rect(x, y, w, h, color);
+        return;
+    }
+    
+    // Pokud jsme v kolizní X zóně, musíme obdélník kreslit po jednotlivých řádcích
+    // Tím zajistíme, že raketa "zajede" pod inventář postupně a plynule
+    for (int i = 0; i < h; i++) {
+        int current_y = y + i;
+        
+        // Přeskočíme řádky, které spadají do inventáře
+        if (current_y >= 77 && current_y <= 111) {
+            continue; 
+        }
+        
+        // Vykreslíme jen ten jeden povolený řádek obdélníku
+        st7735_fill_rect(x, current_y, w, 1, color);
+    }
+}
+
+/************************* redraw_powerups_under_tail *************************/
+// Překreslí power-upy, které byly graficky smazány "úklidem" po nepřátelské střele
+void redraw_powerups_under_tail(int erase_x, int erase_y, int erase_w, int erase_h) {
+    for (int i = 0; i < MAX_POWERUPS; i++) {
+        if (active_powerups[i].active) {
+            // Jednoduchá matematika pro protnutí dvou obdélníků
+            // Pokud černý flek zasahuje do 8x8 plochy power-upu...
+            if (erase_x < active_powerups[i].x + 8 && erase_x + erase_w > active_powerups[i].x &&
+                erase_y < active_powerups[i].y + 8 && erase_y + erase_h > active_powerups[i].y) {
+                
+                // ...tak ho okamžitě překreslíme zpět!
+                draw_powerup8x8(active_powerups[i].x, active_powerups[i].y, active_powerups[i].type, COLOR_BG);
+            }
+        }
     }
 }
 
@@ -410,9 +513,10 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		int tail_y = p.y + tail_offset;
 		
 		// Smažeme ocas střely, pokud je ještě na obrazovce
-		bool tail_on_screen = is_enemy ? (tail_y > 16) : (tail_y < SHIP_Y);
+		bool tail_on_screen = is_enemy ? (tail_y >= 16) : (tail_y < SHIP_Y);
 		if (tail_on_screen) {
-			st7735_draw_pixel(p.x, tail_y, COLOR_BG);
+			safe_draw_pixel(p.x, tail_y, COLOR_BG);
+			if (is_enemy) redraw_powerups_under_tail(p.x, tail_y, 1, 1);
 		}
 		
 		// Barvy podle toho, kdo střílí (Hráč: modrá stopa/světle modrá špička | Nepřítel: červená stopa/žlutá špička)
@@ -420,7 +524,7 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		uint16_t tip_color   = is_enemy ? COLOR_ORANGE : COLOR_CYAN;
 
 		// Stará špička ztmavne
-		st7735_draw_pixel(p.x, p.y, trace_color);
+		safe_draw_pixel(p.x, p.y, trace_color);
 		
 		// Posun
 		p.y += direction;
@@ -435,7 +539,7 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		}
 		
 		// Nová zářivá špička
-		st7735_draw_pixel(p.x, p.y, tip_color);
+		safe_draw_pixel(p.x, p.y, tip_color);
 
 		// Kontrola okrajů
 		bool out_of_bounds = is_enemy ? (p.y >= edge_limit) : (p.y <= edge_limit);
@@ -445,7 +549,8 @@ void process_projectile(Projectile& p, bool is_enemy) {
 			// Smazání celého laseru z obrazovky
 			for(uint8_t j = 0; j <= LASER_LENGTH; j++) {
 				int erase_y = is_enemy ? (p.y - j) : (p.y + j);
-				st7735_draw_pixel(p.x, erase_y, COLOR_BG);
+				safe_draw_pixel(p.x, erase_y, COLOR_BG);
+				if (is_enemy) redraw_powerups_under_tail(p.x, tail_y, 1, 1);
 			}
 			
 			// Odeslání přes UART (odesíláme logicky jen vlastní střely)
@@ -459,8 +564,11 @@ void process_projectile(Projectile& p, bool is_enemy) {
 	else if (p.type == WEP_ROCKET) {
 		
 		// Smazání stopy po raketě (spodní/horní řádek, který po posunu zůstane)
-		int erase_y = is_enemy ? (p.y - 1) : (p.y + 8);
-		st7735_fill_rect(p.x, erase_y, 3, 1, COLOR_BG);
+		int erase_y = is_enemy ? (p.y) : (p.y + 8);
+		if (erase_y >= 16 && erase_y < SHIP_Y) {
+            safe_fill_rect(p.x, erase_y, 3, 1, COLOR_BG);
+            if (is_enemy) redraw_powerups_under_tail(p.x, erase_y, 3, 1);
+        }
 
 		// Posun
 		p.y += direction;
@@ -480,16 +588,17 @@ void process_projectile(Projectile& p, bool is_enemy) {
 		int wing_y_offset   = is_enemy ? 0 : 4;           // Křidélka vzadu
 
 		// Vykreslení rakety na nové pozici (x, y, šířka, výška)
-		st7735_fill_rect(p.x + 1, p.y, 1, 8, body_color);                    // Tělo
-		st7735_fill_rect(p.x, p.y + wing_y_offset, 1, 4, wing_color);        // Levé křidélko
-		st7735_fill_rect(p.x + 2, p.y + wing_y_offset, 1, 4, wing_color);    // Pravé křidélko
+		safe_fill_rect(p.x + 1, p.y, 1, 8, body_color);                    // Tělo
+		safe_fill_rect(p.x, p.y + wing_y_offset, 1, 4, wing_color);        // Levé křidélko
+		safe_fill_rect(p.x + 2, p.y + wing_y_offset, 1, 4, wing_color);    // Pravé křidélko
 
 		// Kontrola okrajů
 		bool out_of_bounds = is_enemy ? (p.y >= edge_limit) : (p.y <= edge_limit);
 		if (out_of_bounds) {
 			p.active = false;
 			// Smazání celé 3x8 rakety
-			st7735_fill_rect(p.x, p.y, 3, 9, COLOR_BG);
+			safe_fill_rect(p.x, p.y, 3, 9, COLOR_BG);
+			if (is_enemy) redraw_powerups_under_tail(p.x, p.y - direction, 3, 9);
 			
 			if (!is_enemy) {
 				// uart_send_projectile(p.x, p.type);
@@ -504,9 +613,12 @@ void process_projectile(Projectile& p, bool is_enemy) {
         if (!is_enemy) {
             check_powerup_collisions(p);
         }
+        if (is_enemy) {
+            check_player_collision(p);
+        }
 
-		// Paprsek se v ose Y neposouvá, jen trvá 1 sec
-		if (micros() - p.spawn_time > 1000000UL) {
+		// Paprsek se v ose Y neposouvá, jen trvá 0.5 sec
+		if (micros() - p.spawn_time > 500000UL) {
 			p.active = false;
 			// Vypršel čas -> smažeme paprsek. Vždy je od y=16 až k lodi (SHIP_Y).
 			st7735_fill_rect(p.x, 16, 2, SHIP_Y - 16, COLOR_BG);
@@ -526,16 +638,39 @@ void process_projectile(Projectile& p, bool is_enemy) {
 	}
 }
 
+/************************* spawn_enemy_projectile *************************/
+void spawn_enemy_projectile(uint8_t received_x, WeaponType wep_type) {
+	// 127 je šířka obrazovky. Tímto získáme přesně zrcadlovou pozici.
+	uint8_t mirrored_x = (DISPLAY_WIDTH-1) - received_x;
+	
+	for (int i = 0; i < MAX_PROJECTILES; i++) {
+		// Hledáme volné místo ve vyhrazeném poli pro NEPŘÁTELE
+		if (!enemy_lasers[i].active) {
+			enemy_lasers[i].spawn_time = micros(); 
+			enemy_lasers[i].active = true;
+			enemy_lasers[i].x = mirrored_x;
+			enemy_lasers[i].y = TOP_HUD_Y_END + 1; // Začíná nahoře
+			enemy_lasers[i].type = wep_type; // Zbraň podle parametru
+			
+			// Pokud stál časovač střel (na obrazovce nic neletělo), spustíme ho
+			if (projectileTimer->isDone()) {
+				projectileTimer->startTimerUs(25000);
+			}
+			break; 
+		}
+	}
+}
+
 /************************* spawn_projectile *************************/
 // Pomocná funkce pro vytvoření jedné fyzické střely
 void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 	for (int i = 0; i < MAX_PROJECTILES; i++) {
-		if (!player_projectiles[i].active) {
-			player_projectiles[i].active = true;
-			player_projectiles[i].x = ship_x + 7; // Vycentrování
-			player_projectiles[i].y = (wep == WEP_ROCKET) ? (ship_y - 8) : (ship_y - 1);			
-			player_projectiles[i].type =  wep;
-			player_projectiles[i].spawn_time = micros(); // Pro laser
+		if (!player_lasers[i].active) {
+			player_lasers[i].active = true;
+			player_lasers[i].x = ship_x + 7; // Vycentrování
+			player_lasers[i].y = (wep == WEP_ROCKET) ? (ship_y - 8) : (ship_y - 1);			
+			player_lasers[i].type =  wep;
+			player_lasers[i].spawn_time = micros(); // Pro laser
 
 			// Zvuky přesunuty sem
 			if (wep == WEP_RAILGUN) Soundboard::playSound(Soundboard::sfx_railgun);
@@ -546,7 +681,7 @@ void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 			// TADY ODESLAT DATA: Střela se právě narodila, řekneme to protihráči!
             Messenger::sendProjectile(wep, ship_x);
 
-            spawn_enemy_projectile(ST7735_WIDTH - x, wep);
+			spawn_enemy_projectile(player_lasers[i].x, wep); //pro testovani, jestli se nepratelske strely vykresli na druhe strane - funguje
 
 			break; // Vytvořeno, končíme hledání
 		}
@@ -562,7 +697,7 @@ void try_shoot(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 	// Spočítáme, kolik střel má hráč aktuálně na obrazovce
 	uint8_t active_count = 0;
 	for (int i = 0; i < MAX_PROJECTILES; i++) {
-		if (player_projectiles[i].active) {
+		if (player_lasers[i].active) {
 			active_count++;
 		}
 	}
@@ -596,28 +731,6 @@ void try_shoot(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 	}
 }
 
-/************************* spawn_enemy_projectile *************************/
-void spawn_enemy_projectile(uint8_t received_x, WeaponType wep_type) {
-	// 127 je šířka obrazovky. Tímto získáme přesně zrcadlovou pozici.
-	uint8_t mirrored_x = (ST7735_WIDTH-1) - received_x;
-	
-	for (int i = 0; i < MAX_PROJECTILES; i++) {
-		// Hledáme volné místo ve vyhrazeném poli pro NEPŘÁTELE
-		if (!enemy_lasers[i].active) {
-			enemy_lasers[i].active = true;
-			enemy_lasers[i].x = mirrored_x;
-			enemy_lasers[i].y = TOP_HUD_Y_END + 1; // Začíná nahoře
-			enemy_lasers[i].type = wep_type; // Zbraň podle parametru
-			
-			// Pokud stál časovač střel (na obrazovce nic neletělo), spustíme ho
-			if (projectileTimer->isDone()) {
-				projectileTimer->startTimerUs(25000);
-			}
-			break; 
-		}
-	}
-}
-
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -641,19 +754,22 @@ void gameplay_init(void) {
 	fireCooldownTimer->startTimerUs(0);
 	powerupSpawnTimer->startTimerUs(5000000);                                           // Později změnit na 20 sec
     
-    x = ST7735_WIDTH / 2; // Startovní pozice lodě
+    x = DISPLAY_WIDTH / 2; // Startovní pozice lodě
 	btn_state = BTN_IDLE;
+	last_enc_btn = false;
+	last_A = (PIND & (1 << PD2)) >> PD2;
 	current_weapon = WEP_RAILGUN; // Aktuálně zvolená zbraň
 	burst_shots_left = 0;
 	inventory_count = 0;
 	isShieldActive = false;
 	isRapidFireActive = false;
 	player_hp = 99;
-	enemy_hp = 99;
+	enemy_hp[1] = 99;
+	enemy_hp[2] = 99;
     
 	// Promazání paměti objektů
     for (int i = 0; i < MAX_PROJECTILES; i++) {
-        player_projectiles[i].active = false;
+        player_lasers[i].active = false;
         enemy_lasers[i].active = false;
     }
 	for (int i = 0; i < MAX_POWERUPS; i++) {
@@ -663,12 +779,18 @@ void gameplay_init(void) {
 		active_sentries[i].active = false;
 	}
 
+	st7735_fill_screen(COLOR_BG);
+	draw_ship(50, 50, COLOR_ORANGE);
+	draw_char_buffer(10, 10, "Cekani na hrace", 0, COLOR_GREEN, COLOR_BG);
+	Messenger::initTopology(getSelectedPlayerNum(), getSelectedName()); //TODO Skap pri chybe
+	Soundboard::playMelody(Soundboard::imperialMarch);
+
 	// Vyprázdníme HAL enkodér (zahodíme případné staré ticky)
-	input_get_encoder_ticks();
+	//input_get_encoder_ticks();
     
     st7735_fill_screen(COLOR_BG);
     gameplay_draw_top_hud_static();
-    gameplay_draw_top_hud_dynamic(99, 99); // P1_Hp, P2_Hp
+    gameplay_draw_top_hud_dynamic(enemy_hp[1], enemy_hp[2]); // P1_Hp, P2_Hp
     gameplay_draw_bottom_hud(99, WEP_RAILGUN, player_ammo); // your_hp, wep, ammo_array
 	draw_dotted_rect(0, 78, 12, 33, COLOR_MAGENTA);
     draw_ship(x, SHIP_Y, COLOR_BLUE);
@@ -679,12 +801,14 @@ void gameplay_init(void) {
 GameState gameplay_tick(void) {
 
 	// --- PŘEPÍNÁNÍ ZBRANÍ (enkodérové tlačítko) ---
-	if (input_encoder_button_rising() == true) { // Detekce náběžné hrany
+	bool current_enc_btn = input_encoder_button_pressed();
+	if (current_enc_btn && !last_enc_btn) { // Detekce náběžné hrany
 		WeaponType old_weapon = current_weapon;
 		current_weapon = static_cast<WeaponType>((current_weapon + 1) % 4);
 		draw_weapon_selection_box(old_weapon, COLOR_BG);
 		draw_weapon_selection_box(current_weapon, COLOR_WHITE);
 	}
+	last_enc_btn = current_enc_btn;
 
 	// --- ČTENÍ TLAČÍTKA STŘELBY (fire button přes HAL) ---
 	bool fire_down = input_fire_button_pressed();
@@ -763,14 +887,9 @@ GameState gameplay_tick(void) {
 
 		// A) HRÁČOVY STŘELY
 		for (int i = 0; i < MAX_PROJECTILES; i++) {
-			if (player_projectiles[i].active) {
+			if (player_lasers[i].active) {
 				any_laser_active = true;
-				process_projectile(player_projectiles[i], false); // false = není to nepřítel
-
-				// HLÍDÁNÍ: Letí tento laser v oblasti inventáře?
-                if (player_projectiles[i].x <= 13 && player_projectiles[i].y >= 70 && player_projectiles[i].y <= 115) {
-                    refresh_inventory = true;
-                }
+				process_projectile(player_lasers[i], false); // false = není to nepřítel
 			}
 		}
 
@@ -779,10 +898,6 @@ GameState gameplay_tick(void) {
 			if (enemy_lasers[i].active) {
 				any_laser_active = true;
 				process_projectile(enemy_lasers[i], true); // true = je to nepřítel
-
-				if (enemy_lasers[i].x <= 13 && enemy_lasers[i].y >= 70 && enemy_lasers[i].y <= 115) {
-                    refresh_inventory = true;
-                }
 			}
 		}
 
@@ -853,33 +968,53 @@ GameState gameplay_tick(void) {
 	}
 
     // --- ČTENÍ ENKODÉRU (POHYB LODĚ) ---
-	int8_t ticks = input_get_encoder_ticks();
-    uint8_t pixels_per_tick = 3;
-	if (ticks != 0) {
-        uint8_t new_x = 0;
-        //posun doleva
-        if (ticks < 0){
-            new_x = x - (uint8_t)(-ticks) * pixels_per_tick; 
-            //teleport
-            if (new_x > ST7735_WIDTH - 1 - SHIP_LENGTH){
-                new_x = ST7735_WIDTH - 1 - SHIP_LENGTH;
-            }
-        }
+    uint8_t current_A = (PIND & (1 << PD3)) >> PD3;
 
-        //posun doprava
-        else if (ticks > 0){
-            new_x = x + (uint8_t)ticks * pixels_per_tick;
-            //teleport
-            if (new_x > ST7735_WIDTH - 1 - SHIP_LENGTH){
-                new_x = 0;
-            }
-        }
+    if (current_A != last_A) {
+	    if (current_A == 0) {
+		    uint8_t current_B = (PIND & (1 << PD2)) >> PD2;
+		    uint8_t old_x = x; // Zapamatujeme si starou pozici
 
-        st7735_fill_rect(x, SHIP_Y, SHIP_LENGTH, SHIP_LENGTH, COLOR_BG);
-        uint16_t ship_color = isShieldActive ? COLOR_WHITE : COLOR_BLUE;
-        x = new_x;
-        draw_ship(x, SHIP_Y, ship_color);
-	}
+		    // --- Výpočet nové pozice s wrappingem ---
+		    if (current_B != current_A) {
+			    if (x >= 3) {
+				    x -= 3; // Doleva
+				    } else {
+				    x = DISPLAY_WIDTH - SHIP_LENGTH; // Skok na pravý okraj (128 - 16 = 112)
+			    }
+			    } else {
+			    if (x <= (DISPLAY_WIDTH - SHIP_LENGTH - 3)) {
+				    x += 3; // Doprava
+				    } else {
+				    x = 0; // Skok na levý okraj
+			    }
+		    }
+
+		    // Pokud jsme se pohnuli, překreslíme
+		    if (x != old_x) {
+			    // 1. Uklidíme "odpad" pomocí rychlého fill_rect!
+			    
+			    // A) Teleport (Skok přes celou obrazovku)
+			    if ((old_x < 3 && x > 100) || (old_x > 100 && x < 3)) {
+				    // Smažeme celý starý prostor 16x16
+				    st7735_fill_rect(old_x, SHIP_Y, SHIP_LENGTH, SHIP_LENGTH, COLOR_BG);
+			    }
+			    // B) Normální posun doleva (mažeme 3 pixely široký pruh vpravo)
+			    else if (x < old_x) {
+				    st7735_fill_rect(old_x + 13, SHIP_Y, 3, SHIP_LENGTH, COLOR_BG);
+			    }
+			    // C) Normální posun doprava (mažeme 3 pixely široký pruh vlevo)
+			    else {
+				    st7735_fill_rect(old_x, SHIP_Y, 3, SHIP_LENGTH, COLOR_BG);
+			    }
+			    
+			    // 2. Vykreslíme loď na nové pozici
+				uint16_t ship_color = isShieldActive ? COLOR_WHITE : COLOR_BLUE; 
+			    draw_ship(x, SHIP_Y, ship_color);
+		    }
+	    }
+	    last_A = current_A;
+    }	
 	
 	// --- KONTROLA VYPRŠENÍ POWER-UPŮ ---
 	if (isRapidFireActive && rapidFirePUTimer->isDone()) {
