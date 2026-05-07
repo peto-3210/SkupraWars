@@ -30,7 +30,7 @@
 #define POWERUP_HOLD_TIME 666000  // 666 ms pro dlouhý stisk
 #define LIFETIME_RAPID 5000000    // 5 sec
 #define LIFETIME_SHIELD 6000000   // 6.0 sec
-#define LIFETIME_SENTRY 8000000  // 8.0 sec
+#define LIFETIME_SENTRY 9000000  // 9.0 sec
 #define COOLDOWN_SENTRY 2000000   // 2.0 sec
 
 // Časy jsou v mikrosekundách
@@ -256,7 +256,6 @@ uint8_t get_weapon_damage(WeaponType wep) {
 		case WEP_BURST:   return 2;  // Burst střílí 3 projektily, celkem dá 6 DMG
 		case WEP_ROCKET:  return 11; 
 		case WEP_LASER:   return 1;  
-		case WEP_SENTRY:  return 3;
 		default: return 1;
 	}
 }
@@ -692,7 +691,6 @@ void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 
 			// Zvuky přesunuty sem
 			if (wep == WEP_RAILGUN) Soundboard::playSound(Soundboard::sfx_railgun);
-			if (wep == WEP_SENTRY) Soundboard::playSound(Soundboard::sfx_railgun);
 			if (wep == WEP_ROCKET) Soundboard::playSound(Soundboard::sfx_rocket);
 			if (wep == WEP_LASER) Soundboard::playSound(Soundboard::sfx_laser);
 			if (wep == WEP_BURST) Soundboard::playSound(Soundboard::sfx_burst);
@@ -942,7 +940,7 @@ GameState gameplay_tick(void) {
 			// 2. Kontrola střelby
 			if (current_time - active_sentries[i].last_shot_time > COOLDOWN_SENTRY) {
 				// Věž střílí (jako typ pošleme Railgun z její pozice)
-				spawn_projectile(WEP_SENTRY, active_sentries[i].x, active_sentries[i].y);
+				spawn_projectile(WEP_RAILGUN, active_sentries[i].x, active_sentries[i].y);
 						
 				// Resetujeme časovač střelby
 				active_sentries[i].last_shot_time = current_time;
