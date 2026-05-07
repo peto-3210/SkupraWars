@@ -1,4 +1,5 @@
 #include "Communication/Datalink.hpp"
+#include "hal/st7735.h"
 
 static const uint8_t ANNOUNCEMENT_FUNC = 0;
 
@@ -98,6 +99,10 @@ Datalink::recvPacketState Datalink::recvPacket(Packet& packet){
 
 	//Packet is for this participant
 	if (packet.distance == 0){
+		if (packet.function == ANNOUNCEMENT_FUNC){
+			
+			return announcementReceived;
+		}
 		return packetReceived;
 	}
 

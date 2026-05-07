@@ -1,6 +1,6 @@
 #include "Communication/Messenger.hpp"
 
-bool Messenger::initialized = false;
+bool Messenger::initializedTopology = false;
 bool Messenger::replying = false;
 const char* Messenger::errorMsg = nullptr;
 Messenger::receivedMessages Messenger::messageBuffer = {};
@@ -132,11 +132,11 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t self, bool requireReply){
 	neighbourNum = nodeNum - 1;
     myId = self;
 	Packet packet = {0};
-    packet.distance = 7;
+    packet.distance = neighbourNum;
     packet.function = announceFun;
     packet.direction = true;
     packet.payload.announcement.payload = (neighbourNum << 3) | myId;
-    uart_flush_rx();
+    //uart_flush_rx();
 
 	if (sendMessage(packet) == false){
 		return false;
@@ -147,6 +147,7 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t self, bool requireReply){
 	uint32_t retryNum = 0;
 
 	while (receivedNum < neighbourNum){
+        SoftwareTimerPool::busyWaitUs(1000);
 		recvMessages();
 
         if (announcementBuffer.getMessageNum() == 0){
@@ -182,6 +183,7 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t self, bool requireReply){
 	}
 
 	while (announcementBuffer.getMessageNum() == 0){
+        SoftwareTimerPool::busyWaitUs(1000);
         recvMessages();
         SoftwareTimerPool::busyWaitUs(1000);
         retryNum++;
@@ -197,6 +199,7 @@ bool Messenger::initTopology(uint8_t nodeNum, uint8_t self, bool requireReply){
 		packet.payload.announcement.type == topologyInitAnn && 
         packet.payload.announcement.payload == ((neighbourNum << 3) | myId)){
             replying = requireReply;
+            initializedTopology = true;
 			return true;
 		}
 	setError(ringNotClosed);
@@ -234,12 +237,19 @@ uint8_t Messenger::findNeighbour(bool direction, uint8_t* id){
     return iterator;
 }
 
-void Messenger::disableNeighbour(uint8_t neighbourId){
+bool Messenger::disableNeighbour(uint8_t neighbourId){
     for (uint8_t i = 0; i < neighbourNum; ++i){
         if (neighbours[i] == neighbourId){
             neighbourActive[i] = false;
         }
     }
+
+    for (uint8_t i = 0; i < neighbourNum; ++i){
+        if (neighbourActive[i] == true){
+            return true;
+        }
+    }
+    return false;
 }
 
 bool Messenger::sendToNeighbour(Packet& packet, bool direction){
@@ -300,6 +310,7 @@ uint8_t Messenger::getPacket(packetPayload& payload, bool& direction){
     }
     Packet newPacket = messageBuffer.getMessage();
     payload = newPacket.payload;
+    direction = newPacket.direction;
     return newPacket.function;
 }
 
@@ -313,5 +324,7 @@ bool Messenger::getAnnouncement(packetPayload& payload){
 }
 
 void Messenger::commLoop(){
-    recvMessages();
+    if (initializedTopology == true){
+        recvMessages();
+    }
 }

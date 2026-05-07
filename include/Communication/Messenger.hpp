@@ -1,5 +1,6 @@
 #include "Datalink.hpp"
 #include "Gameplay.hpp"
+#include "hal/st7735.h"
 
 #ifndef MESSENGER
 #define MESSENGER
@@ -90,7 +91,7 @@ class Messenger {
         "Pending reply buffer full.",
     };
 
-    static bool initialized;
+    static bool initializedTopology;
     static const char* errorMsg;
     static receivedMessages messageBuffer;
     static receivedMessages announcementBuffer;
@@ -174,8 +175,9 @@ class Messenger {
      * @brief Disables participant
      * 
      * @param neighbourId Participant ID
+     * @return false if there is no neighbour left, true otherwise
      */
-    static void disableNeighbour(uint8_t neighbourId);
+    static bool disableNeighbour(uint8_t neighbourId);
 
     /**
      * @brief Sends message about projectle
@@ -192,6 +194,7 @@ class Messenger {
      * 
      * @param newHP Current HP
      * @param position Current position
+     * @param direction Direction of packet
      * 
      * @returns False if error occured, true otherwise
      */

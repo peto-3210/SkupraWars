@@ -98,13 +98,15 @@ int8_t scroll_dir = input_get_encoder_dir();
             }
             
             // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
-            if (input_encoder_button_rising() == true){
+            if (input_fire_button_rising() == true){
                 switch (selected_item){
                     case START_GAME:
                         st7735_fill_screen(COLOR_WHITE);
                         draw_char_buffer(10, 10, "Vyber pocet hracu", 0, 0xF800, 0xFFFF); 
                         draw_dotted_rect(60, 50, 7, 9, COLOR_RED);
                         selected_item = 2;
+                        char c = selected_item + 48;
+                        draw_char_buffer(61, 51, &c, 1, COLOR_BG, COLOR_WHITE);
                         menu_state = SELECT_PLAYER_NUM;
                         break;
                 }
@@ -130,10 +132,12 @@ int8_t scroll_dir = input_get_encoder_dir();
             }
             
             // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
-            if (input_encoder_button_rising() == true){
+            if (input_fire_button_rising() == true){
                 st7735_fill_screen(COLOR_WHITE);
                 draw_char_buffer(20, 10, "Vyber si jmeno", 0, 0xF800, 0xFFFF); 
                 player_num = selected_item;
+                selected_item = 0;
+                draw_char_buffer(50, 50, names[selected_item], 0, 0xF800, 0xFFFF);
                 menu_state = SELECT_NAME;
             }
             break;
@@ -155,7 +159,7 @@ int8_t scroll_dir = input_get_encoder_dir();
             }
             
             // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
-            if (input_encoder_button_rising() == true){
+            if (input_fire_button_rising() == true){
                 player_name = selected_item;
                 st7735_fill_screen(COLOR_WHITE);
                 return STATE_GAMEPLAY;
