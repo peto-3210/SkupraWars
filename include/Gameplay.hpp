@@ -19,7 +19,8 @@ enum WeaponType {
 	WEP_RAILGUN = 0,
 	WEP_BURST = 1,
 	WEP_ROCKET = 2,
-	WEP_LASER = 3
+	WEP_LASER = 3,
+	WEP_SENTRY
 };
 
 /************* STRUKTURY *************/

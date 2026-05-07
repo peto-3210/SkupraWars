@@ -9,7 +9,7 @@ typedef struct {
     uint8_t  last_raw;        // last raw read
     uint32_t read_timeout;      // when raw last changed
     bool     pressed;         // state of button
-    bool     rising_edge_announced    //true if function for rising edge reading was called     
+    bool     rising_edge_announced;    //true if function for rising edge reading was called     
 } ButtonStruct;
 
 static ButtonStruct enc_btn = { 0, 0, 0, false, false };

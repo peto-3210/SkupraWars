@@ -139,7 +139,8 @@ class Soundboard {
     enum melodies {
         imperialMarch,
         zakazaneUvolneni,
-        grandVictory
+        grandVictory,
+        rickRollRiff
     };
 
     // Initializes soundboard.

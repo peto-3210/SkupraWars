@@ -18,6 +18,7 @@ const char* MENU_ITEMS[NUM_ITEMS] = {
 
 // --- LOKÁLNÍ PROMĚNNÉ ---
 static uint8_t selected_item = 0; // Která položka je právě vybraná
+static uint8_t last_enc_A;        // Pro čtení enkodéru
 
 // Funkce pro kompletní (nebo částečné) překreslení menu
 static void draw_menu() {
@@ -42,6 +43,7 @@ static void draw_menu() {
 
 void menu_init(void) {
     selected_item = 0;
+    last_enc_A = (PIND & (1 << PD2)) >> PD2;
     
     st7735_fill_screen(0xFFFF); // Bílé pozadí
     draw_menu();
@@ -50,19 +52,27 @@ void menu_init(void) {
 
 GameState menu_tick(void) {
     // --- 1. ČTENÍ ENKODÉRU (SCROLLOVÁNÍ) ---
-    int8_t ticks = input_get_encoder_ticks();
-    if (ticks < 0) {
-        // Scrollování dolů
-        if (selected_item < NUM_ITEMS - 1) {
-            selected_item++;
-            draw_menu();
+        uint8_t current_enc_A = (PIND & (1 << PD2)) >> PD2;
+
+    if (current_enc_A != last_enc_A) {
+        if (current_enc_A == 0) {
+            uint8_t current_enc_B = (PIND & (1 << PD3)) >> PD3;
+            
+            if (current_enc_B != current_enc_A) {
+                // Scrollování nahoru
+                if (selected_item > 0) {
+                    selected_item--;
+                    draw_menu(); // Překreslíme změnu
+                }
+            } else {
+                // Scrollování dolů
+                if (selected_item < NUM_ITEMS - 1) {
+                    selected_item++;
+                    draw_menu(); // Překreslíme změnu
+                }
+            }
         }
-    } else if (ticks > 0) {
-        // Scrollování nahoru
-        if (selected_item > 0) {
-            selected_item--;
-            draw_menu();
-        }
+        last_enc_A = current_enc_A;
     }
     
     // --- 2. ČTENÍ TLAČÍTKA (POTVRZENÍ) ---
