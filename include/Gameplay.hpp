@@ -6,7 +6,7 @@
 typedef enum { BTN_IDLE,
 	BTN_WAIT_PUSHED,
 	BTN_WAIT_RELEASE,
-	BTN_WAIT_FULL_RELEASE,
+	BTN_WAIT_FULL_RELEASE
  } ButtonState;
 
 enum PowerUpType {

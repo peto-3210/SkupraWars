@@ -72,6 +72,7 @@ static uint8_t last_A;
 static uint8_t player_hp = 0;
 static uint8_t enemy_hp[2] = {0, 0}; // [0] je levý, [1] je pravý
 
+
 PowerUpType player_inventory[MAX_INVENTORY];
 SentryGun active_sentries[MAX_SENTRIES];
 PowerUp active_powerups[MAX_POWERUPS];
@@ -195,7 +196,7 @@ void use_powerup() {
 		PowerUpType used_type = player_inventory[inventory_count];
 		
 		// Smažeme ho z displeje na levém panelu
-		uint8_t erase_y = 80 + (inventory_count * 10);
+		uint8_t erase_y = 100 - (inventory_count * 10);
 		st7735_fill_rect(2, erase_y, 8, 8, COLOR_BG);
 		
 		// Aktivace a (re)startování specifického timeru
