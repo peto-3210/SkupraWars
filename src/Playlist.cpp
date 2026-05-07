@@ -81,6 +81,17 @@ const toneRecord sfx_system_crashToneRecord[] PROGMEM = {
     {c, 600}    // Finální, hluboký, "mrtvý" tón, který zní jako bzučení chyby
 };
 
+const toneRecord gameOverToneRecord[] PROGMEM = {
+    {c, 200},
+    {none, 50},
+    {c, 200},
+    {f, 200},
+    {e, 200},
+    {dS, 400}, // Mollový tón, který "táhne" náladu dolů
+    {none, 50},
+    {d, 600}   // Definitivní tečka
+};
+
 // Grand Victory
 const toneRecord grandVictoryToneRecord[] PROGMEM = {
     // První část: Rozjezd
@@ -205,4 +216,5 @@ void Soundboard::initPlaylist(){
 	melodyList[imperialMarch].setToneBuffer(iMarchToneRecord, sizeof(iMarchToneRecord) / sizeof(toneRecord));
 	melodyList[rickRollRiff].setToneBuffer(rickRollRiffToneRecord, sizeof(rickRollRiffToneRecord) / sizeof(toneRecord));
 	melodyList[zakazaneUvolneni].setToneBuffer(zakazaneUvolneniToneRecord, sizeof(zakazaneUvolneniToneRecord) / sizeof(toneRecord));
+    melodyList[gameOver].setToneBuffer(gameOverToneRecord, sizeof(gameOverToneRecord) / sizeof(toneRecord));
 }

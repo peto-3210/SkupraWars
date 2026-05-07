@@ -73,6 +73,7 @@ uint8_t burst_shots_left;
 static uint8_t last_A;
 static uint8_t player_hp = 0;
 static uint8_t enemy_hp[2] = {0, 0}; // [0] je levý, [1] je pravý
+//static char announcementBuffer[32] = {0};
 
 bool endGame = false;
 bool fatalError = false;
@@ -92,6 +93,7 @@ static SoftwareTimer* rapidFirePUTimer = nullptr;
 static SoftwareTimer* shieldPUTimer = nullptr;
 static SoftwareTimer* powerupSpawnTimer = nullptr;
 static SoftwareTimer* burstTimer = nullptr; 
+static SoftwareTimer* announcementTimer = nullptr;
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -407,14 +409,17 @@ bool check_player_collision(Projectile& p) {
 					// ZDE BUDE KONEC HRY (SMRT)
 				}
 				// Překreslíme náš dolní panel
-				update_player_hp_ui(player_hp);				
+				update_player_hp_ui(player_hp);			
 				// Přehrajeme zvuk zásahu
 				Soundboard::playSound(Soundboard::sfx_hit_enemy);
 			}
 		}
 
 		// --- Odeslání mého nového HP přes UART ---
-		endGame = !Messenger::sendHP(player_hp, x); 
+		Messenger::sendHP(player_hp, x); 
+		if (player_hp == 0){
+			endGame = true;
+		}
         
 
 		// Pohlcení projektilu (stejně jako u powerupů, laser nepolykáme)
@@ -431,21 +436,6 @@ bool check_player_collision(Projectile& p) {
 		}
 	}
 	return false;
-}
-
-/************************* on_enemy_hp_received *************************/
-void apply_enemy_hp_update(uint8_t enemy_index, uint8_t new_hp) {
-    // enemy_index: 0 = levý, 1 = pravý
-    // Uložíme nové HP správnému nepříteli do našeho pole
-    enemy_hp[enemy_index] = new_hp;
-    
-    // Překreslíme ho na displeji
-    update_enemy_hp_ui(enemy_index, new_hp);
-    
-    if (enemy_hp[enemy_index] == 0) {
-        // ZDE BUDE KÓD PRO SMRT DANÉHO NEPŘÍTELE
-        // Např. mu tam můžeš nakreslit explozi nebo "00" a zneaktivnit jeho stranu
-    }
 }
 
 /************************* safe_draw_pixel *************************/
@@ -715,7 +705,7 @@ void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y) {
 			if (wep == WEP_BURST) Soundboard::playSound(Soundboard::sfx_burst);
 
 			// TADY ODESLAT DATA: Střela se právě narodila, řekneme to protihráči!
-            endGame = Messenger::sendProjectile(wep, ship_x + 7);
+            Messenger::sendProjectile(wep, ship_x + 7);
 
 			//spawn_enemy_projectile(player_lasers[i].x, wep); //pro testovani, jestli se nepratelske strely vykresli na druhe strane - funguje
 
@@ -784,6 +774,7 @@ void gameplay_init(void) {
 		rapidFirePUTimer = SoftwareTimerPool::acquireTimer();
 		shieldPUTimer = SoftwareTimerPool::acquireTimer();
 		powerupSpawnTimer = SoftwareTimerPool::acquireTimer();
+		announcementTimer = SoftwareTimerPool::acquireTimer();
 	}
 	
 	burstTimer->startTimerUs(100);
@@ -832,6 +823,8 @@ void gameplay_init(void) {
     gameplay_draw_bottom_hud(99, WEP_RAILGUN, player_ammo); // your_hp, wep, ammo_array
 	draw_dotted_rect(0, 78, 12, 33, COLOR_MAGENTA);
     draw_ship(x, SHIP_Y, COLOR_BLUE);
+
+	SoftwareTimerPool::busyWaitUs(5000);
 }
 
 /************************* gameplay_tick *************************/
@@ -840,6 +833,22 @@ GameState gameplay_tick(void) {
 
 	if (fatalError == true){
 		draw_char_buffer(10, 10, "Error", 0, COLOR_RED, COLOR_BG);
+	}
+
+	if (endGame == true){
+		return STATE_DEFEAT;
+	}
+
+	uint8_t annP;
+	
+	if (Messenger::getAnnouncement(annP) == Messenger::deathAnn){
+		//uint8_t killer;
+		uint8_t victim;
+		//killer = annP >> 3;
+		victim = annP & 0b111;
+		if (Messenger::disableNeighbour(victim) == false){
+			return STATE_VICTORY;
+		}
 	}
 
 	Datalink::packetPayload p;
@@ -851,10 +860,6 @@ GameState gameplay_tick(void) {
 			if (direction == false){
 				position += 64;
 			}
-			/*buff[0] = position / 100 +48;
-			buff[1] = position % 100 +48;
-			buff[2] = position % 10 +48;
-			draw_char_buffer(10, 10, buff, 2, COLOR_CYAN, COLOR_RED);*/
 			spawn_enemy_projectile(position, (WeaponType)p.projectile.type);
 			break;
 		case Messenger::tellHPFun:

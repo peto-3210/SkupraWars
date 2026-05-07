@@ -11,3 +11,4 @@ GameState menu_tick(void);
 
 uint8_t getSelectedName();
 uint8_t getSelectedPlayerNum();
+const char* getName(uint8_t index);

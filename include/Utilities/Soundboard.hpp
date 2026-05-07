@@ -140,6 +140,7 @@ class Soundboard {
         imperialMarch,
         zakazaneUvolneni,
         grandVictory,
+        gameOver,
         rickRollRiff
     };
 

@@ -212,9 +212,9 @@ class Messenger {
      * @brief Retrieves single packet from announcementBuffer
      * 
      * @param packet Packet that will be filled with data
-     * @return True if packet is available, false otherwise
+     * @return Announcement code if packet is available, 0 otherwise
      */
-    static bool getAnnouncement(packetPayload& p);
+    static uint8_t getAnnouncement(uint8_t& p);
 
     /**
      * @brief Receives and forwards packets, should be called in loop

@@ -288,9 +288,9 @@ bool Messenger::sendHP(uint8_t hp, uint8_t position){
     if (hp == 0){
         p.function = announceFun;
         p.payload.announcement.type = deathAnn;
-        uint8_t id = 0;
-        findNeighbour(true, &id);
-        p.payload.announcement.payload = (id << 3) | myId;
+        //uint8_t id = 0;
+        //findNeighbour(true, &id);
+        p.payload.announcement.payload = myId;
         return sendAnnouncement(p);
     }
 
@@ -314,13 +314,13 @@ uint8_t Messenger::getPacket(packetPayload& payload, bool& direction){
     return newPacket.function;
 }
 
-bool Messenger::getAnnouncement(packetPayload& payload){
+uint8_t Messenger::getAnnouncement(uint8_t& payload){
     if (announcementBuffer.getMessageNum() == 0){
-        return false;
+        return 0;
     }
     Packet newPacket = announcementBuffer.getMessage();
-    payload = newPacket.payload;
-    return true;
+    payload = newPacket.payload.announcement.payload;
+    return newPacket.payload.announcement.type;
 }
 
 void Messenger::commLoop(){

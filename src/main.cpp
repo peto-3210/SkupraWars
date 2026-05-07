@@ -108,6 +108,27 @@ int main(void) {
 			case STATE_ARSENAL: { // P�id�no, aby kompil�tor nenad�val
 				break;
 			}
+
+			case STATE_DEFEAT: {
+				st7735_fill_screen(COLOR_RED);
+				draw_char_buffer(10, 10, "Umrels!", 0, COLOR_WHITE, COLOR_BG);
+				Soundboard::playMelody(Soundboard::rickRollRiff);
+				current_state = STATE_DEAD_END;
+				break;
+			}
+
+			case STATE_VICTORY: {
+				st7735_fill_screen(COLOR_GREEN);
+				draw_char_buffer(10, 10, "Vyhrals!", 0, COLOR_WHITE, COLOR_BG);
+				Soundboard::playMelody(Soundboard::grandVictory);
+				current_state = STATE_DEAD_END;
+				break;
+
+			case STATE_DEAD_END:
+			break;
+			}
+
+
 		}
 	}
 }

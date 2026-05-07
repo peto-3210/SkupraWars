@@ -32,12 +32,6 @@ enum menuStates{
 // --- LOKÁLNÍ PROMĚNNÉ ---
 static uint8_t selected_item = 0; // Která položka je právě vybraná
 
-uint8_t player_name = 0;
-uint8_t player_num = 0;
-uint8_t getSelectedName(){return player_name;}
-uint8_t getSelectedPlayerNum(){return player_num;}
-
-menuStates menu_state = INIT_MENU;
 const char* names[] = {
     "Abuk   ",
     "Sevak  ",
@@ -48,6 +42,14 @@ const char* names[] = {
     "Naftra ",
     "Nazked "
 };
+uint8_t player_name = 0;
+uint8_t player_num = 0;
+uint8_t getSelectedName(){return player_name;}
+uint8_t getSelectedPlayerNum(){return player_num;}
+const char* getName(uint8_t index){return names[index];}
+
+menuStates menu_state = INIT_MENU;
+
 
 // Funkce pro kompletní (nebo částečné) překreslení menu
 static void draw_menu() {
