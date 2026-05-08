@@ -55,7 +55,8 @@ struct PowerUp {
     uint32_t spawn_time;      // Timestamp for despawning after a while
 };
 
-// --- GAMEPLAY CORE FUNCTIONS ---
+
+// --- GAMEPLAY FUNCTIONS ---
 
 /**
  * @brief Updates the ammo count display on the HUD for a specific weapon.
@@ -66,6 +67,7 @@ struct PowerUp {
  * @param new_ammo The current ammo count to be displayed (00-99).
  */
 void update_hud_ammo(WeaponType wep, uint8_t new_ammo);
+
 
 /**
  * @brief Increases the player's ammo count for a given weapon.
@@ -87,6 +89,7 @@ void add_ammo(WeaponType wep, uint8_t amount);
  */
 void add_powerup_to_inventory(PowerUpType type);
 
+
 /**
  * @brief Spawns a new sentry gun at the ship's current horizontal position.
  * * Searches for an available (inactive) slot in the sentry array. If found, 
@@ -95,6 +98,7 @@ void add_powerup_to_inventory(PowerUpType type);
  * * @param ship_x The current X-coordinate of the player's ship.
  */
 void spawn_sentry_gun(uint8_t ship_x);
+
 
 /**
  * @brief Activates and removes the most recently acquired power-up from the inventory.
@@ -105,6 +109,7 @@ void spawn_sentry_gun(uint8_t ship_x);
  * * @note If the inventory is empty, the function exits silently without any effect.
  */
 void use_powerup();
+
 
 /**
  * @brief Spawns a new power-up at a random location within the play area.
@@ -117,6 +122,7 @@ void use_powerup();
  */
 bool powerup_spawn_random();
 
+
 /**
  * @brief Retrieves the damage value for a specific weapon type.
  * * Centralizes the combat balancing. Each weapon has a unique damage profile:
@@ -128,6 +134,7 @@ bool powerup_spawn_random();
  * @return uint8_t The damage value inflicted by a single projectile/hit.
  */
 uint8_t get_weapon_damage(WeaponType wep);
+
 
 /**
  * @brief Performs an Axis-Aligned Bounding Box (AABB) collision detection.
@@ -142,6 +149,7 @@ uint8_t get_weapon_damage(WeaponType wep);
  */
 bool check_collision(int x1, int y1, int w1, int h1,
                         int x2, int y2, int w2, int h2);
+
 
 /**
  * @brief Processes interactions between a single projectile and all active power-ups.
@@ -158,6 +166,7 @@ bool check_collision(int x1, int y1, int w1, int h1,
  */
 bool check_powerup_collisions(Projectile& p);
 
+
 /**
  * @brief Updates the player's health points (HP) display on the HUD.
  * * Formats the HP value as a two-digit string (e.g., "05") to ensure 
@@ -166,6 +175,7 @@ bool check_powerup_collisions(Projectile& p);
  * * @param hp The current health value of the player to be displayed.
  */
 void update_player_hp_ui(uint8_t hp);
+
 
 /**
  * @brief Updates the health indicator for a specific enemy on the HUD.
@@ -177,6 +187,7 @@ void update_player_hp_ui(uint8_t hp);
  * @param hp The current health value of the specified enemy.
  */
 void update_enemy_hp_ui(uint8_t enemy_index, uint8_t hp);
+
 
 /**
  * @brief Evaluates interactions between enemy projectiles and the player's ship.
@@ -194,6 +205,7 @@ void update_enemy_hp_ui(uint8_t enemy_index, uint8_t hp);
  */
 bool check_player_collision(Projectile& p);
 
+
 /**
  * @brief Draws a single pixel with protection for the inventory UI zone.
  * * Acts as a wrapper for the standard pixel drawing function. It implements 
@@ -205,6 +217,7 @@ bool check_player_collision(Projectile& p);
  * @param color The 16-bit color value (RGB565).
  */
 void safe_draw_pixel(int x, int y, uint16_t color);
+
 
 /**
  * @brief Renders a filled rectangle with per-line clipping against the HUD.
@@ -220,6 +233,7 @@ void safe_draw_pixel(int x, int y, uint16_t color);
  */
 void safe_fill_rect(int x, int y, int w, int h, uint16_t color);
 
+
 /**
  * @brief Restores power-up sprites that were visually corrupted by projectile cleanup.
  * * When a projectile's trail is erased from the screen, it may leave "holes" in 
@@ -230,6 +244,7 @@ void safe_fill_rect(int x, int y, int w, int h, uint16_t color);
  * @param erase_w,erase_h Width and height of the erased area.
  */
 void redraw_powerups_under_tail(int erase_x, int erase_y, int erase_w, int erase_h);
+
 
 /**
  * @brief Main update routine for all projectile types. 
@@ -248,6 +263,7 @@ void redraw_powerups_under_tail(int erase_x, int erase_y, int erase_w, int erase
  */
 void process_projectile(Projectile& p, bool is_enemy);
 
+
 /**
  * @brief Instantiates a projectile fired by the network opponent.
  * * Coordinates the arrival of enemy fire by mirroring the received X-coordinate 
@@ -259,6 +275,7 @@ void process_projectile(Projectile& p, bool is_enemy);
  */
 void spawn_enemy_projectile(uint8_t received_x, WeaponType wep_type);
 
+
 /**
  * @brief Spawns a local player projectile and synchronizes it with the network peer.
  * * Initializes a projectile at the ship's current location, adjusting the 
@@ -269,6 +286,7 @@ void spawn_enemy_projectile(uint8_t received_x, WeaponType wep_type);
  * @param ship_x,ship_y Current coordinates of the player's ship.
  */
 void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y);
+
 
 /**
  * @brief Evaluates firing conditions and executes a shot if all requirements are met.
@@ -286,6 +304,7 @@ void spawn_projectile(WeaponType wep, uint8_t ship_x, uint8_t ship_y);
  */
 void try_shoot(WeaponType wep, uint8_t ship_x, uint8_t ship_y);
 
+
 /**
  * @brief Initializes the gameplay environment and resets the game state.
  * * Prepares the system for a new game session through several phases:
@@ -302,6 +321,7 @@ void try_shoot(WeaponType wep, uint8_t ship_x, uint8_t ship_y);
  * ensuring no stale data remains from previous sessions.
  */
 void gameplay_init(void);
+
 
 /**
  * @brief Main gameplay update loop, executed once per frame.
@@ -325,6 +345,7 @@ void gameplay_init(void);
 GameState gameplay_tick(void);
 
 
+
 // --- UI & GRAPHICS EXTERN FUNCTIONS ---
 
 /**
@@ -342,6 +363,7 @@ GameState gameplay_tick(void);
  */
 extern void update_inventory_ui(uint8_t count, PowerUpType* inventory);
 
+
 /**
  * @brief Renders a rectangular outline using a dotted line pattern. 
  * It is primarily used for the inventory slot outlines to provide 
@@ -351,6 +373,7 @@ extern void update_inventory_ui(uint8_t count, PowerUpType* inventory);
  * @param color The 16-bit color value for the dots.
  */
 extern void draw_dotted_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
+
 
 /**
  * @brief Renders a 1-bit power-up icon based on its type.
@@ -369,6 +392,7 @@ extern void draw_powerup8x8(uint8_t x, uint8_t y, PowerUpType type, uint16_t bg_
 
 
 // --- HUD rendering functions ---
+
 /**
  * @brief Renders the complete bottom HUD, including health and weapon systems.
  * * This function assembles the player's dashboard at the bottom of the screen:
@@ -389,6 +413,7 @@ extern void draw_powerup8x8(uint8_t x, uint8_t y, PowerUpType type, uint16_t bg_
  */
 extern void gameplay_draw_bottom_hud(uint8_t your_health, WeaponType active_weapon, uint8_t ammo_counts[]);
 
+
 /**
  * @brief Renders a selection highlight box around a specific weapon slot.
  * * Provides visual feedback for weapon selection by drawing a rectangular 
@@ -401,6 +426,7 @@ extern void gameplay_draw_bottom_hud(uint8_t your_health, WeaponType active_weap
  * @param color The 16-bit color value (RGB565) for the selection border.
  */
 extern void draw_weapon_selection_box(WeaponType wep, uint16_t color);
+
 
 /**
  * @brief Updates the dynamic health indicators on the top HUD.
@@ -416,6 +442,7 @@ extern void draw_weapon_selection_box(WeaponType wep, uint16_t color);
  */
 extern void gameplay_draw_top_hud_dynamic(uint8_t p1_health, uint8_t p2_health);
 
+
 /**
  * @brief Renders the non-changing (static) visual elements of the top HUD.
  * * This function initializes the upper interface layout:
@@ -430,6 +457,7 @@ extern void gameplay_draw_top_hud_dynamic(uint8_t p1_health, uint8_t p2_health);
  */
 extern void gameplay_draw_top_hud_static(void);
 
+
 /**
  * @brief Renders a hit indicator icon near the health bar of the affected enemy.
  * * Displays a temporary emote (e.g., an "X" or flash icon) to provide immediate 
@@ -439,6 +467,7 @@ extern void gameplay_draw_top_hud_static(void);
  * * @param direction Boolean flag indicating which enemy was hit (matches network direction).
  */
 extern void draw_enemy_hit(bool direction);
+
 
 /**
  * @brief Removes all enemy hit indicators from the top HUD.

@@ -131,7 +131,7 @@ void st7735_fill_screen(uint16_t color) {
     ST7735_CS_HIGH();
 }
 
-// Draws a filled rectangle
+// Renders a filled rectangle
 void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color) {
     if (st7735_set_draw_area(x, y, w, h) == 0) return;
 	
@@ -146,7 +146,7 @@ void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color
 	ST7735_CS_HIGH();
 }
 
-// Draws a single pixel
+// Renders a single pixel
 void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {
 	if (st7735_set_draw_area(x, y, 1, 1) == 0) return;
 
@@ -156,7 +156,7 @@ void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {
 	ST7735_CS_HIGH();
 }
 
-// Draws a raw 16-bit color buffer to the specified area
+// Renders a raw 16-bit color buffer to the specified area
 void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* buffer){
     if (st7735_set_draw_area(x, y, w, h) == 0) return;
 
@@ -218,7 +218,6 @@ void draw_16bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t
     }
     ST7735_CS_HIGH();
 }
-
 
 // Renders a complete string buffer using the built-in 5x7 font
 void draw_char_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color) {
