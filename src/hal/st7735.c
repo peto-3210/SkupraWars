@@ -1,11 +1,15 @@
 #include "hal/st7735.h"
 #include "hal/spi.h"
 
+// --- MACROS ---
+// Helper macro to send a 16-bit color over an 8-bit SPI bus (MSB first)
 #define write_color(color) do { \
     spi_transfer((color) >> 8); \
     spi_transfer((color) & 0xFF); \
 } while(0)
 
+// --- FONTS ---
+// Standard 5x7 ASCII font stored in Flash memory (PROGMEM) to save RAM
 const uint8_t font5x7[] PROGMEM = {
 	0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x2f,0x00,0x00, 0x00,0x07,0x00,0x07,0x00, 0x14,0x7f,0x14,0x7f,0x14,
 	0x24,0x2a,0x7f,0x2a,0x12, 0x23,0x13,0x08,0x64,0x62, 0x36,0x49,0x55,0x22,0x50, 0x00,0x05,0x03,0x00,0x00,
@@ -33,28 +37,33 @@ const uint8_t font5x7[] PROGMEM = {
 	0x00,0x00,0x7f,0x00,0x00, 0x00,0x41,0x36,0x08,0x00, 0x10,0x08,0x08,0x10,0x08
 };
 
+// --- HARDWARE ABSTRACTION LAYER ---
+
+// Sends a command byte to the ST7735 controller
 void st7735_write_command(uint8_t cmd) {
-    ST7735_DC_CMD();        // Říkáme displeji: "Tohle je příkaz!"
-    ST7735_CS_LOW();        // Vybereme displej (začátek komunikace)
-    spi_transfer(cmd);      // Odešleme přes SPI
-    ST7735_CS_HIGH();       // Ukončíme komunikaci
+    ST7735_DC_CMD();        // Set Data/Command pin LOW (Command mode)
+    ST7735_CS_LOW();        // Select the display (Pull CS LOW)
+    spi_transfer(cmd);      // Transmit via SPI
+    ST7735_CS_HIGH();       // Deselect the display
 }
 
+// Sends a data byte to the ST7735 controller
 void st7735_write_data(uint8_t data) {
-    ST7735_DC_DATA();       // Říkáme displeji: "Tohle jsou data!"
+    ST7735_DC_DATA();       // Set Data/Command pin HIGH (Data mode)
     ST7735_CS_LOW();
     spi_transfer(data);
     ST7735_CS_HIGH();
 }
 
+// Performs hardware reset and basic initialization sequence for the ST7735
 void st7735_init(void) {
-    spi_init(); //Inicializace SPI
+    spi_init(); //Initialize the SPI bus
 
-    // Nastavení pinů DC (PD0) a RST (PB0) jako výstupy
+    // Configure DC (Data/Command) and RST (Reset) pins as outputs
 	DDRB |= (1 << RESET_PIN);
 	DDRD |= (1 << DATA_SELECT_PIN);
     
-    // Hardwarový reset
+    // Hardware reset sequence
     ST7735_RST_HIGH();
     _delay_ms(10);
     ST7735_RST_LOW();
@@ -62,79 +71,82 @@ void st7735_init(void) {
     ST7735_RST_HIGH();
     _delay_ms(120);
     
-    // Softwarový reset (Command 0x01)
+    // Software reset (Command 0x01)
     st7735_write_command(0x01);
     _delay_ms(150);
     
-    // Konec režimu spánku (Command 0x11)
+    // Sleep out (Command 0x11)
     st7735_write_command(0x11);
     _delay_ms(120);
 
-    // Nastavení formátu barev na 16-bit / pixel (Command 0x3A)
+    // Color mode setup (Command 0x3A)
     st7735_write_command(0x3A);
-    st7735_write_data(0x05); // 0x05 = 16-bit
+    st7735_write_data(0x05); // 0x05 = 16-bit color format (RGB565)
     
-    // Orientace displeje 
+    // Display orientation (Command 0x36)
     st7735_write_command(0x36);
-    st7735_write_data(0xC0); // 0xC0 otočí displej o 180°
+    st7735_write_data(0xC0); // 0xC0 = Rotate 180 degrees
     
     st7735_fill_screen(COLOR_BG);
 
-    // Zapnutí displeje (Command 0x29)
+    // Display ON (Command 0x29)
     st7735_write_command(0x29);
 }
 
-
+// Sets the active drawing window in the display RAM
 bool st7735_set_draw_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h) {
+    // Boundary check
     if (x + w - 1 >= ST7735_WIDTH) return false; 
     if (y + h - 1 >= ST7735_HEIGHT) return false;
 
-    // Nastavení sloupců (X)
+    // Set Column Address (X coordinates)
     st7735_write_command(0x2A);
     st7735_write_data(0x00); st7735_write_data(x);
     st7735_write_data(0x00); st7735_write_data(x + w - 1);
     
-    // Nastavení řádků (Y)
+    // Set Row Address (Y coordinates)
     st7735_write_command(0x2B);
     st7735_write_data(0x00); st7735_write_data(y);
     st7735_write_data(0x00); st7735_write_data(y + h - 1);
     
-    // Příkaz pro zápis do paměti RAM (kreslení)
+    // Memory Write command (Prepare for pixel data)
     st7735_write_command(0x2C);
     return true;
 }
 
 
+// --- DRAWING FUNCTIONS ---
+
+// Clears the entire display with a single color
 void st7735_fill_screen(uint16_t color) {
-    // Příkaz pro nastavení okna vykreslování (celá obrazovka 128x160)
     st7735_set_draw_area(0, 0, ST7735_WIDTH, ST7735_HEIGHT);
     
     ST7735_DC_DATA();
     ST7735_CS_LOW();
     
-    // Vyplníme všech 128 * 160 pixelů
+    // Stream pixel data for the full 128x160 resolution
     for (uint32_t i = 0; i < (128 * 160); i++) {
         write_color(color);
     }
     ST7735_CS_HIGH();
 }
 
-
+// Draws a filled rectangle
 void st7735_fill_rect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color) {
     if (st7735_set_draw_area(x, y, w, h) == 0) return;
 	
 	ST7735_DC_DATA();
 	ST7735_CS_LOW();
 	
-	// 6. Rychlé odeslání všech pixelů v daném obdélníku
-	uint16_t total_pixels = w * h + 98;
+	// Fast pixel push for the defined area
+	uint16_t total_pixels = w * h + 98; // Note: +98 offset applied
 	for (uint16_t i = 0; i < total_pixels; i++) {
 		write_color(color);
 	}
 	ST7735_CS_HIGH();
 }
 
-
+// Draws a single pixel
 void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {
 	if (st7735_set_draw_area(x, y, 1, 1) == 0) return;
 
@@ -144,7 +156,7 @@ void st7735_draw_pixel(uint8_t x, uint8_t y, uint16_t color) {
 	ST7735_CS_HIGH();
 }
 
-
+// Draws a raw 16-bit color buffer to the specified area
 void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* buffer){
     if (st7735_set_draw_area(x, y, w, h) == 0) return;
 
@@ -153,18 +165,20 @@ void st7735_draw_object(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t* bu
     }
 }
 
-
+// Renders an 8x8 monochrome bitmap stored in PROGMEM
 void draw_8bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t color, uint16_t bg_color) {
     uint8_t w = 8;
     uint8_t h = 8;
     if (st7735_set_draw_area(x, y, w, h) == 0) return;
 
+    // Load bitmap into RAM
     uint8_t bitmap_buffer[8] = {};
     memcpy_P(bitmap_buffer, bitmap_array, 8);
 
     ST7735_DC_DATA();
 	ST7735_CS_LOW();
     
+    // Parse bits and stream colors
     for (uint8_t row = 0; row < h; row++) { // Výška znaku
         for (uint8_t col = w; col > 0; col--) { // Znak je široký 8 nebo 16 pixelů
             if ((bitmap_buffer[row] & (1U << (col - 1))) != 0){
@@ -178,18 +192,20 @@ void draw_8bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t 
     ST7735_CS_HIGH();
 }
 
-
+// Renders a 16x16 monochrome bitmap stored in PROGMEM
 void draw_16bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t color, uint16_t bg_color) {
     uint8_t w = 16;
     uint8_t h = 16;
     if (st7735_set_draw_area(x, y, w, h) == 0) return;
 
+    // Load bitmap into RAM
     uint16_t bitmap_buffer[16] = {};
     memcpy_P(bitmap_buffer, bitmap_array, 32);
 
     ST7735_DC_DATA();
 	ST7735_CS_LOW();
     
+    // Parse bits and stream colors
     for (uint8_t row = 0; row < h; row++) { // Výška znaku
         for (uint8_t col = w; col > 0; col--) { // Znak je široký 8 nebo 16 pixelů
             if ((bitmap_buffer[row] & (1U << (col - 1))) != 0){
@@ -204,12 +220,15 @@ void draw_16bit_PROGMEM(uint8_t x, uint8_t y, const void *bitmap_array, uint16_t
 }
 
 
-// Funkce, která projde celý text a nakreslí ho písmenko po písmenku
+// Renders a complete string buffer using the built-in 5x7 font
 void draw_char_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t color, uint16_t bg_color) {
     if (len == 0) len = strlen(buffer);
     if(len > 20) len = 20;
+
+    // Set drawing area for the entire string at once
     if (st7735_set_draw_area(x, y, len * (CHAR_WIDTH + 1), CHAR_HEIGHT + (ADD_BLANK_LINE > 0)) == 0) return;
 
+    // Load necessary characters from PROGMEM to RAM buffer
     uint8_t char_buffer[len * CHAR_WIDTH];
     for (uint8_t i = 0; i < len; ++i){
         if (buffer[i] < 32 || buffer[i] > 126) continue; // Znaky mimo tabulku ignorujeme
@@ -218,6 +237,7 @@ void draw_char_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t co
     ST7735_DC_DATA();
 	ST7735_CS_LOW();
     
+    // Render row by row across all characters for maximum SPI efficiency
     for (uint8_t row = 1; row < (1 << CHAR_HEIGHT); row <<= 1) { // Výška znaku
         for (uint8_t chr = 0; chr < len; ++chr){ // Projdeme všechny znaky v řetězci
             for (uint8_t col = 0; col < CHAR_WIDTH; col++) { // Font je široký 5 pixelů
@@ -228,10 +248,11 @@ void draw_char_buffer(int x, int y, const char* buffer, uint8_t len, uint16_t co
                     write_color(bg_color);
                 }
             }
-            write_color(bg_color);// Mezera mezi znaky
+            write_color(bg_color); // Spacing between characters
         }
     }
 
+    // Append blank line if defined
     if (ADD_BLANK_LINE == true){
         for (uint8_t i = 0; i < (CHAR_WIDTH + 1) * len; ++i){
             write_color(bg_color);

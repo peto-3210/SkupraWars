@@ -1,7 +1,7 @@
 #ifndef SPI_H
 #define SPI_H
 
-#include "libraries.h" // Obsahuje <avr/io.h> a další věci z projektu
+#include "libraries.h" 
 
 #define SPI_MOSI PB3
 #define SPI_MISO_UNUSED PB4
@@ -13,14 +13,14 @@
 #endif
 
 /**
- * @brief Inicializuje hardwarové SPI na ATmega328P (Master mód)
+ * @brief Init SPI on ATmega328P (Master)
  */
 void spi_init(void);
 
 /**
- * @brief Odešle a zároveň přijme jeden bajt přes SPI
- * * @param data Bajt k odeslání
- * @return Přijatý bajt
+ * @brief Transfers and recieve 1 byte
+ * * @param data Transfered byte
+ * @return Recieved byte
  */
 uint8_t spi_transfer(uint8_t data);
 

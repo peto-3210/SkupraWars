@@ -4,33 +4,33 @@
 #define AoD_Q      (60000 / AoD_BPM)
 #define AoD_E      (AoD_Q / 2)
 
-// Definice pol� pro zvuky a melodie
+// Define arrays for sounds and melodies
 Sound4 Soundboard::soundList[soundNum] = {};
 Melody Soundboard::melodyList[melodyNum] = {};
 
-// Railgun: Rychl� vysok� p�pnut� (default)
+// Railgun
 const toneRecord sfx_railgunToneRecord[] PROGMEM = {
 	{aH, 30},
 	{fH, 40},
 	{c, 20}
 };
 
-// Burst: T�i kr�tk� p�pnut� (staccato)
+// Burst
 const toneRecord sfx_burstToneRecord[] PROGMEM = {
 	{cH, 20},
 	{none, 20},
 	{cH, 20}
 };
 
-// Raketomet: Hlubok�, del�� zvuk (nab�haj�c�)
+// Rocket
 const toneRecord sfx_rocketToneRecord[] PROGMEM = {
-	{gH, 15}, // Z�blesk v�buchu
+	{gH, 15}, 
 	{c, 80},
 	{dS, 80},
 	{f, 150}
 };
 
-// Laser: Pulsace
+// Laser
 const toneRecord sfx_laserToneRecord[] PROGMEM = {
 	{e, 60},
 	{f, 60},
@@ -44,76 +44,75 @@ const toneRecord sfx_laserToneRecord[] PROGMEM = {
 	{e, 60}
 };
 
-// Prázdný zásobník
+// No ammo
 const toneRecord sfx_noAmmoToneRecord[] PROGMEM = {
-	{cH, 15},   // Velmi krátký vysoký "ťuk"
-	{g, 15},    // Rychlý dozvuk mechaniky
-	{none, 10}  // Ukončení
+	{cH, 15},   
+	{g, 15},    
+	{none, 10}  
 };
 
-// Pouziti power-upu
+// Power-up use
 const toneRecord sfx_powerup_useToneRecord[] PROGMEM = {
-	{c, 80},    // Start
-	{e, 80},    // Střed
-	{g, 80},    // Vyšší tón
-	{cH, 150}   // Finální vysoké C (pocit "jsem silnější")
+	{c, 80},    
+	{e, 80},    
+	{g, 80},    
+	{cH, 150}   
 };
 
 // Hit enemy
 const toneRecord sfx_hit_enemyToneRecord[] PROGMEM = {
-    {gH, 30},   // Krátké vysoké pípnutí
-    {none, 10}  // Okamžité utnutí
+    {gH, 30}, 
+    {none, 10}  
 };
 
 // Fatal error
 const toneRecord sfx_fatal_errorToneRecord[] PROGMEM = {
-    {fHS, 500}, // První tón (vysoký a ostrý)
-    {c, 500},   // Druhý tón (hluboký, tvoří tritón k fHS)
-    {fHS, 500}, // Opakování pro naléhavost
-    {c, 500}    // Finální dlouhý hluboký tón
+    {fHS, 500}, 
+    {c, 500},   
+    {fHS, 500}, 
+    {c, 500}    
 };
 
 // System crash
 const toneRecord sfx_system_crashToneRecord[] PROGMEM = {
-    {fHS, 100}, // Ostrý, nepříjemný start
-    {cS, 100},  // Okamžitý propad do disonance
-    {fHS, 100}, // Rychlé "cuknutí" zpět
-    {c, 600}    // Finální, hluboký, "mrtvý" tón, který zní jako bzučení chyby
+    {fHS, 100}, 
+    {cS, 100}, 
+    {fHS, 100}, 
+    {c, 600}   
 };
 
+// Game over
 const toneRecord gameOverToneRecord[] PROGMEM = {
     {c, 200},
     {none, 50},
     {c, 200},
     {f, 200},
     {e, 200},
-    {dS, 400}, // Mollový tón, který "táhne" náladu dolů
+    {dS, 400}, 
     {none, 50},
-    {d, 600}   // Definitivní tečka
+    {d, 600}   
 };
 
 // Grand Victory
 const toneRecord grandVictoryToneRecord[] PROGMEM = {
-    // První část: Rozjezd
     {c, 150}, 
     {g, 150}, 
     {c, 150}, 
     {e, 150},
     
-    // Druhá část: Gradace
     {g, 100}, 
     {none, 20},
     {g, 100},
     {a, 150},
     {b, 150},
 
-    // Finále: Triumf
-    {cH, 600},  // Dlouhé vysoké C
+    {cH, 600}, 
     {none, 50},
-    {g, 150},   // Krátký dovětek
-    {cH, 800}   // Poslední vítězný úder
+    {g, 150},  
+    {cH, 800}   
 };
 
+// Imperial March
 const toneRecord iMarchToneRecord[] PROGMEM = {
 	{a, 500},
 	{a, 500},
@@ -140,66 +139,63 @@ const toneRecord iMarchToneRecord[] PROGMEM = {
 
 // NEVER GONNA GIVE YOU UP, NEVERE GONNA LET YOU DOWN
 const toneRecord rickRollRiffToneRecord[] PROGMEM = {
-    // --- Bicí úvod (ponechán pro kontext) ---
     {aH, 20}, {none, 50}, {aH, 20}, {none, 50}, 
     {aH, 20}, {aH, 20}, {none, 100},           
 
-    // --- Ten hlavní riff ---
     {aS, 120},  // Da
     {cH, 120},  // da
     {f, 120},   // da
     {cH, 120},  // da
     
-    {dH, 250},  // DÁÁ (vyšší tón)
+    {dH, 250},  // Daaaa
     {fH, 120},  // da
     {dH, 120},  // da
-    {cH, 350},  // DÁÁÁ...
+    {cH, 350},  // Daaaa
     
-    {none, 50}, // mikro pauza pro oddělení
+    {none, 50},
     
     {aS, 120},  // Da
     {cH, 120},  // da
     {f, 120},   // da
     {cH, 120},  // da
     
-    {cH, 250},  // DÁ (střední)
+    {cH, 250},  // DAAAA
     {aS, 150},  // da
     {a, 150},   // da
-    {g, 350}    // DŮŮŮ...
+    {g, 350}    // Duuuu
 };
 
-// Zakázané uvolnění (Turbo Arcade Edition)
+// Zakazane uvolneni
 const toneRecord zakazaneUvolneniToneRecord[] PROGMEM = {
-    // --- 1. MOTIV (D -> G) ---
-    {d, 150}, {none, 30},  // PAM (důrazný úder)
-    {d, 80},               // ta
-    {g, 150},              // DA
+    {d, 150}, 
+    {none, 30},
+    {d, 80},               
+    {g, 150},              
     {none, 20},
-    {g, 150},              // DAM
-    {none, 100},           // krátký oddech
+    {g, 150},            
+    {none, 100},           
 
-    // --- 2. MOTIV (D -> A) ---
-    {d, 150}, {none, 30},  // PAM
-    {d, 80},               // ta
-    {a, 150},              // DA
+    {d, 150}, 
+    {none, 30}, 
+    {d, 80},             
+    {a, 150},              
     {none, 20},
-    {a, 150},              // DAM
+    {a, 150},           
     {none, 100},
 
-    // --- 3. MOTIV (Gradace) ---
-    {d, 150}, {none, 30},
+    {d, 150}, 
+    {none, 30},
     {d, 80}, 
     {g, 120}, 
-    {fHS, 120},            // Rychlejší sestup
+    {fHS, 120},         
     {e, 120},
-    {d, 250},              // Návrat do základní tóniny (D)
+    {d, 250},             
 
-    // --- 4. ZÁVĚR (Odpich) ---
     {none, 50},
     {a, 100}, 
     {g, 100}, 
     {fHS, 100}, 
-    {e, 200}               // Zakončení fráze
+    {e, 200}             
 };
 
 void Soundboard::initPlaylist(){

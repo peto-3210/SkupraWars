@@ -1,10 +1,11 @@
 #pragma once
 #include <hal/libraries.h>
+
 typedef enum {
     STATE_MENU,
     STATE_GAMEPLAY,
-    STATE_ARSENAL, // Zatím nevyužito
-    STATE_SCORE,    // Zatím nevyužito
+    STATE_ARSENAL,  // unused
+    STATE_SCORE,    // unused
     STATE_DEFEAT,
     STATE_VICTORY,
     STATE_DEAD_END,

@@ -1,11 +1,9 @@
-#define F_CPU 16000000UL
+#define F_CPU 16000000UL // Defines the CPU clock frequency
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "hal/spi.h"
 #include "hal/st7735.h"
 #include "Utilities/SoftwareTimer.hpp"
-
-// Jednotliv� hern� moduly
 #include "Graphics/Menu.hpp"
 #include "Graphics/Graphics.hpp"
 #include "Gameplay.hpp"
@@ -16,7 +14,7 @@
 #include <Communication/Messenger.hpp>
 #include <stdio.h>
 
-// Definice barev
+// --- Color Definitions (RGB565 format) ---
 #define COLOR_GREEN		0x07E0
 #define COLOR_BLUE		0x001F
 #define COLOR_RED		0xF800
@@ -24,17 +22,19 @@
 #define COLOR_CYAN		0x07FF
 #define COLOR_ORANGE	0xFD20
 #define COLOR_MAGENTA   0xF81F
-#define COLOR_BG        0x0000 // Černé pozadí
+#define COLOR_BG        0x0000 
 
+// Initializes hardware peripherals and software subsystems
 void init_all(){
-    spi_init();
-	st7735_init();
-    input_init();
-	SoftwareTimerPool::initTimerPool();
-    Soundboard::initSoundboard();
-    Datalink::initDatalink();
+    spi_init();                         // Initialize SPI communication (needed for the display)
+	st7735_init();                      // Initialize the ST7735 TFT display driver
+    input_init();                       // Initialize buttons and encoder inputs
+	SoftwareTimerPool::initTimerPool(); // Setup the internal timer system 
+    Soundboard::initSoundboard();       // Initialize the buzzer/speaker outputs
+    Datalink::initDatalink();           // Setup UART communication for the multiplayer network
 }
 
+// Processes continuous background tasks
 void tick_all(){
     input_tick();
     SoftwareTimerPool::tick();
@@ -43,33 +43,27 @@ void tick_all(){
 }
 
 int main(void) {
+	// Enable global interrupts (required for timers and UART)
 	sei();
-	init_all();
-	// Všechny piny PD2 až PD5 nastavíme jako VSTUPY (0)
-	//DDRD &= ~((1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
-	// Zapneme Pull-up rezistory pro tyto piny
-	//PORTD |= (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
 
+	init_all();
 	
-	
-	// ��zení stavů
+	// Initialize the Finite State Machine 
 	GameState current_state = STATE_MENU;
 	bool state_just_changed = true;
+
+	// Global player statistics
 	extern	uint16_t numberOfShots;
 	extern	uint16_t numberOfHits;
 	extern	uint16_t totalDamage;
-	
-	/*if (Messenger::initTopology(3, 0x0004) == false){
-		Soundboard::playSound(Soundboard::sfx_laser);
-	}
-	else {
-		Soundboard::playSound(Soundboard::sfx_rocket);
-	}*/
-	
 
+	// Main application loop
 	while (1) {
+
+		// Execute background tasks
 		tick_all();
 
+		// Handle hardware reset button -> Return to main menu and reset stats
 		if (input_reset_button_rising() == true){
 			current_state = STATE_MENU;
 			state_just_changed = true;
@@ -78,7 +72,7 @@ int main(void) {
 			totalDamage = 0;
 		}
 
-		// HLAVN� STAVOV� AUTOMAT
+		// State Machine Logic
 		switch (current_state) {
 			
 			case STATE_MENU: { 
@@ -117,20 +111,24 @@ int main(void) {
 				break;
 			}
 
-			case STATE_ARSENAL: { // P�id�no, aby kompil�tor nenad�val
+			case STATE_ARSENAL: {
+				// unused
 				break;
 			}
 
 			case STATE_DEFEAT: {
+				// Render defeat screen
 				st7735_fill_screen(COLOR_RED);
 				draw_char_buffer(10, 20, getName(getSelectedName()), 0, COLOR_WHITE, COLOR_BG);
 				draw_char_buffer(10, 10, "Umrel(a)s!", 0, COLOR_WHITE, COLOR_BG);
 				draw_ship(56, 50, COLOR_MAGENTA);
 
+				// Print player stats
 				char buf[16];
 				snprintf_P(buf, sizeof(buf), PSTR("Zasahy: %u"), numberOfHits);
 				draw_char_buffer(10, 90, buf, 0, COLOR_WHITE, COLOR_BG);
 				snprintf_P(buf, sizeof(buf), PSTR("Vystrely: %u"), numberOfShots);
+				
 				draw_char_buffer(10, 80, buf, 0, COLOR_WHITE, COLOR_BG);
 				Soundboard::playMelody(Soundboard::gameOver);
 				current_state = STATE_DEAD_END;
@@ -138,30 +136,34 @@ int main(void) {
 			}
 
 			case STATE_VICTORY: {
+				// Render victory screen
 				st7735_fill_screen(COLOR_GREEN);
 				draw_char_buffer(10, 20, getName(getSelectedName()), 0, COLOR_WHITE, COLOR_BG);
 				draw_char_buffer(10, 10, "Vyhral(a)s!", 0, COLOR_WHITE, COLOR_BG);
 				draw_ship(56, 50, COLOR_CYAN);
 
+				// Print player stats
 				char buf[16];
 				snprintf_P(buf, sizeof(buf), PSTR("Zasahy: %u"), numberOfHits);
 				draw_char_buffer(10, 90, buf, 0, COLOR_WHITE, COLOR_BG);
 				snprintf_P(buf, sizeof(buf), PSTR("Vystrely: %u"), numberOfShots);
 				draw_char_buffer(10, 80, buf, 0, COLOR_WHITE, COLOR_BG);
+				
 				//snprintf(buf, sizeof(buf), "Poskozeni: %d", totalDamage);
 				//draw_char_buffer(10, 100, buf, 15, COLOR_WHITE, COLOR_BG);
+				
 				Soundboard::playMelody(Soundboard::grandVictory);
 				current_state = STATE_DEAD_END;
-			}break;
+				break;
+			}
 
 			case STATE_FATAL_ERROR:
 				draw_char_buffer(20, 50, "FATAL ERROR", 0, COLOR_WHITE, COLOR_BG);
 				break;
 
 			case STATE_DEAD_END:
-			break;
-
-
+				// Idle state, waiting for hardware reset
+				break;
 		}
 	}
 }
